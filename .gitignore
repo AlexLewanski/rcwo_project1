@@ -6,3 +6,4 @@ resources/
 scripts/devel_scripts/
 data/
 /figures/test_figs/
+.Rhistory
