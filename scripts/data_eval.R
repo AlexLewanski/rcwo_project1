@@ -25,12 +25,14 @@ source(here('scripts', 'data_processing_custom_functions.R'))
 
 
 #data
-file_names <- c('Nests.xlsx', 'RCWs.xlsx', 'RCWs_wout_format.xlsx', 'LastSeenDetail.xlsx')
+file_names <- c('Nests.xlsx', 'RCWs.xlsx', 'RCWs_wout_format.xlsx', 'LastSeenDetail.xlsx', 'Translocation.xlsx')
 raw_dat_list <- lapply(setNames(file_names, tolower(gsub('\\.xlsx', '', file_names))), function(x) {
   read_excel(here('data', 'feb2024_databasemarch2023', x))
 })
 
 #rcws_nest_query1 <- read_excel(here('data', 'feb2024_databasemarch2023', "rcws_nest_query1.xlsx"))
+
+
 
 
 ##############################
@@ -253,6 +255,10 @@ raw_dat_list$nests$mid_dummy[match(dummy_female_info$NatalNest, raw_dat_list$nes
 ### OUTPUTTING PROCESSED DATA ###
 #################################
 
+write.csv(raw_dat_list$translocation,
+          here('data', 'feb2024_databasemarch2023_processed', 'translocation.csv'),
+          row.names = FALSE)
+
 write.csv(pop_filters_df,
           here('data', 'feb2024_databasemarch2023_processed', 'census_processed.csv'),
           row.names = FALSE)
@@ -277,7 +283,7 @@ write.csv(rcws_ped_dummy_pars$dummy_ids,
 
 
 
-
+as.data.frame(raw_dat_list$translocation[ raw_dat_list$translocation$Type == 'Inter-population',])
 
 
 

@@ -11,14 +11,8 @@
 ### PACKAGES ###
 library(here)
 library(tidyverse)
-#library(readxl)
 library(clock)
-library(cowplot)
-library(grid)
-library(gridExtra)
 library(egg)
-#library(ggridges)
-library(magick)
 
 here::here()
 
@@ -35,20 +29,32 @@ rcw_processed_list <- lapply(setNames(file_names, nm = gsub(pattern = '\\.csv', 
 })
 
 
+
 ### ANALYSIS OPTIONS ###
-gd_count <- 20000L
+gd_count <- 50000L
 
-### VISUALIZATION CONTENT ###
-output_figs <- FALSE
+output_results <- TRUE
 
-#color palettes
+# #color palettes
 green_colfunc <- colorRampPalette(c("#add6d6", "#329999", "#287a7a", "#1e5b5b"))
 red_colfunc <- colorRampPalette(c("#ea9999", "#cc0000", "#a30000", "#7a0000"))
 
-#RCW illustrations
-flying_rcw <- image_flop(image_read(here('figures', 'main_paper', 'bird_illustrations', 'rcw_flying1.png')))
-perched_rcw <- image_rotate(image_read(here('figures', 'main_paper', 'bird_illustrations', 'rcw_perched1.png')),
-                            degrees = 0)
+
+pink_colfunc <- colorRampPalette(c("#fac7d3", "#f7a3b7", "#f0597d", "#bf3858"))
+yellow_colfunc <- colorRampPalette(c("#ffdb19", "#e5c100"))
+mint_colfunc <- colorRampPalette(c("#69e6c6", "#06d6a0", "#038060", "#1e5b5b"))
+purple_colfunc <- colorRampPalette(c("#d8b2d8", "#b266b2", "#800080", "#590059"))
+gray_colfunc <- colorRampPalette(c("#b2b2b2", "#808080", "#595959", "#333333"))
+blue_colfunc <- colorRampPalette(c("#9fd0e0", "#58adc9", "#118ab2", "#0b607c"))
+# 
+# group_color_vec <- setNames(c("#f0597d", "#ffdb19", "#595959", "#06d6a0", "#118ab2", "#800080", "#ededed"),
+#          nm = c("ANF", "CBJTC", "FTB", "FTS", "ONF", "WSF-CITRUS", "non-transloc"))
+#          
+         
+# #RCW illustrations
+# flying_rcw <- image_flop(image_read(here('figures', 'main_paper', 'bird_illustrations', 'rcw_flying1.png')))
+# perched_rcw <- image_rotate(image_read(here('figures', 'main_paper', 'bird_illustrations', 'rcw_perched1.png')),
+#                             degrees = 0)
 
 
 
@@ -67,22 +73,40 @@ transloc_ids <- rcw_processed_list$census_processed %>%
   pull(RCWid) %>% 
   unique()
 
-rcws_founder_info <- data.frame(id = get_founders(rcw_processed_list$ped_processed)$founders) %>%
-  mutate(group = case_when(id %in% transloc_ids ~ 'transloc',
-                           TRUE ~ 'non-transloc'))
-
 transloc_info <- rcw_processed_list$rcws %>% 
   filter(Origin == 'Translocated') %>% 
   select(RCWid, MinAge, Sex) %>%
-  rename(year = MinAge)
+  rename(year = MinAge) %>% 
+  left_join(., rcw_processed_list$translocation, by = 'RCWid')
 
-transloc_info_color <- lapply(split(transloc_info, transloc_info$Sex), function(x) {
+rcws_founder_info <- data.frame(id = get_founders(rcw_processed_list$ped_processed)$founders) %>%
+  left_join(., transloc_info[,c('RCWid', 'Source')] %>% rename(id = RCWid), by = 'id') %>% 
+  rename(group = Source) %>% 
+  mutate(group = case_when(!is.na(group) ~ group,
+                           TRUE ~ 'non-transloc'))
+
+transloc_info_color1 <- lapply(split(transloc_info, transloc_info$Sex), function(x) {
   x$sex_color <- switch(x$Sex[1],
                         'M' = {red_colfunc(nrow(x))},
                         'F' = {green_colfunc(nrow(x))})
   return(x)
 }) %>% 
   bind_rows()
+
+
+transloc_info_color <- lapply(split(transloc_info_color1, transloc_info_color1$Source), function(x) {
+  x$source_color <- switch(x$Source[1],
+                        'ANF' = {pink_colfunc(nrow(x))},
+                        'CBJTC' = {yellow_colfunc(nrow(x))},
+                        'FTB' = {gray_colfunc(nrow(x))},
+                        'FTS' = {mint_colfunc(nrow(x))},
+                        'ONF' = {blue_colfunc(nrow(x))},
+                        'WSF-CITRUS' = {purple_colfunc(nrow(x))}
+                        )
+  return(x)
+}) %>% 
+  bind_rows()
+
 
 
 ################
@@ -106,8 +130,29 @@ set.seed(NULL)
 rcws_ancestry_info <- quantify_ancestry(gdrop_mat_output = rcws_gdrop,
                                         founder_group_info = rcws_founder_info)
 
+rcws_ancestry_source_by_year <- pop_info_list[['Scenario3']] %>%
+  rename(id = RCWid) %>% 
+  left_join(., rcws_ancestry_info, by = 'id',
+            relationship = "many-to-many") %>% 
+  group_by(group, year) %>% 
+  summarize(group_anc = sum(anc_prop), .groups = 'drop') %>% 
+  group_by(year) %>% 
+  mutate(ancestry_prop = group_anc/sum(group_anc),
+         group = factor(group, 
+                        levels = rev(c('ANF', 'CBJTC', 'FTB', 'FTS', 'ONF', 'WSF-CITRUS', 'non-transloc')))) %>%
+  ungroup()
+
 rcws_ancestry_info_update <- rcws_ancestry_info %>%
+  mutate(group = case_when(group == 'non-transloc' ~ 'non-transloc',
+                           group != 'non-transloc' ~ 'transloc')) %>% 
+  group_by(id, group) %>% 
+  summarize(anc_prop = sum(anc_prop), .groups = 'drop',
+            allele_count = first(allele_count)) %>% 
   bind_rows(., rcws_ancestry_info %>%
+              mutate(group = case_when(group == 'non-transloc' ~ 'non-transloc',
+                                       group != 'non-transloc' ~ 'transloc')) %>% 
+              group_by(id, group) %>% 
+              summarize(anc_prop = sum(anc_prop), .groups = 'drop') %>% 
               group_by(id) %>%
               filter(n() < 2) %>%
               filter(!'transloc' %in% group) %>%
@@ -117,6 +162,7 @@ rcws_ancestry_info_update <- rcws_ancestry_info %>%
                      allele_count = gd_count*2,
                      anc_prop = 0)) %>%
   filter(group == 'transloc')
+
 
 rcw_inbr_merge <- pop_info_list[['Scenario3']] %>%
   rename(id = RCWid) %>% 
@@ -157,9 +203,26 @@ rcw_partial_founder_summed <- left_join(rcw_partial_founder_fped %>%
   select(id, group, partial_founder_fped, fped_prop, founder_id) %>%
   left_join(pop_info_list[['Scenario3']] %>% rename(id = RCWid), ., by = 'id', relationship = "many-to-many") %>% 
   group_by(year) %>%
-  mutate(pop_size = n()) %>% 
+  #mutate(pop_size = n()) %>% 
   ungroup() %>% 
-  filter(!is.na(partial_founder_fped))
+  filter(!is.na(partial_founder_fped)) %>% 
+  left_join(., pop_info_list[['Scenario3']] %>% 
+              group_by(year) %>% 
+              summarize(pop_size = n()),
+            by = 'year')
+
+rcw_partial_founder_summed_processed <- rcw_partial_founder_summed %>% 
+  group_by(founder_id, year) %>%
+  summarize(part_found_f_sum = sum(partial_founder_fped),
+            group = first(group),
+            pop_size = first(pop_size),
+            .groups = 'drop') %>%
+  group_by(year) %>%
+  mutate(pfound_fsum_prop = part_found_f_sum/sum(part_found_f_sum),
+         pfound_fsum_scale = part_found_f_sum/pop_size) %>% 
+  arrange(pfound_fsum_scale) %>% 
+  mutate(val_cumsum = cumsum(pfound_fsum_scale) - pfound_fsum_scale*0.5)
+
 
 fped_prop_by_group <- rcw_partial_founder_summed %>% 
   group_by(group, year) %>% 
@@ -175,13 +238,14 @@ inbr_founder_color <- rcw_partial_founder_summed %>%
   ungroup() %>% 
   left_join(., transloc_info_color %>% rename(founder_id = RCWid),
             by = 'founder_id') %>% 
-  select(founder_id, sex_color) %>% 
-  mutate(sex_color = if_else(is.na(sex_color), '#e3e3e3', sex_color)) %>% 
+  select(founder_id, sex_color, source_color) %>% 
+  mutate(sex_color = if_else(is.na(sex_color), '#e3e3e3', sex_color),
+         source_color = if_else(is.na(source_color), '#e3e3e3', source_color)) %>% 
   as.data.frame()
 
 
 ### EFFECTIVE POPULATION SIZE ###
-rcws_eqn <- ped_summary_stats(ped = rcw_processed_list$ped_processed, 
+rcws_eqn <- ped_summary_stats(ped = rcw_processed_list$ped_processed,
                               summary = "equiv_gen")
 
 ne_f_df <- data.frame(year = sort(unique(pop_info_list[['Scenario3']]$year)),
@@ -195,13 +259,10 @@ for (X in seq_len(nrow(ne_f_df))) {
                         id = pop_info_list[['Scenario3']][pop_info_list[['Scenario3']]$year == ne_f_df$year[X],'RCWid'],
                         inbr = rcws_inbr,
                         eqg = rcws_eqn)
-  
+
   ne_f_df[X,'ne'] <- ne_val$Ne_f$Ne
   ne_f_df[X,'ne_std'] <- ne_val$Ne_f$stderr
 }
-
-
-
 
 
 rcw_founder_list_gencontr <- list()
@@ -209,7 +270,7 @@ rcw_contr_df <- data.frame(year = sort(unique(pop_info_list[['Scenario3']]$year)
                            contr = NA)
 
 for (ID in rcws_founder_info$id) {
-  rcw_founder_list_gencontr [[ID]] <- rcw_contr_df
+  rcw_founder_list_gencontr[[ID]] <- rcw_contr_df
   for (year_index in seq_along(rcw_contr_df$year)) {
     
     rcw_founder_list_gencontr [[ID]]$contr[year_index] <- calc_gen_contr(
@@ -226,310 +287,158 @@ for (ID in rcws_founder_info$id) {
 rcw_contr_info_df <- bind_rows(rcw_founder_list_gencontr, .id = 'id')
 
 
-
-###################################################################
-### FIG 1: POPULATION OVERVIEW (POP SIZE, INBREEDING, ANCESTRY) ###
-###################################################################
-
-ne_plot <- ne_f_df %>%
-  filter(ne < Inf) %>%
-  ggplot() +
-  geom_segment(aes(x = year,
-                   y = ne - ne_std,
-                   xend = year,
-                   yend = ne + ne_std),
-               color = '#b7b7b7', linewidth = 1.5) +
-  geom_point(aes(x = year, y = ne),
-             shape = 21, colour = '#4c4c4c', fill = NA, 
-             size = 1.75, stroke = 1.2) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        panel.grid.minor = element_blank(),
-        panel.grid.major.x = element_line(linetype = 'dashed', 
-                                          color = '#d8d8d8'),
-        panel.border = element_blank(),
-        axis.line.x = element_blank(),
-        axis.line.y = element_line(color = '#4c4c4c', linewidth = 1.5),
-        axis.ticks = element_line(color = '#808080', linewidth = 0.7),
-        axis.title.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        plot.margin = unit(c(0.1, 1, -0.05, 1), "cm"),
-        axis.title.y = element_text(margin = margin(0, 4.75, 0, 0))
-        ) +
-  scale_x_continuous(limits = c(1993.5, 2022.5), position = "top",
-                     expand = c(0.01, 0)) +
-  ylab("Ne") +
-  coord_cartesian(clip = 'off')
-
-
-top_bar <- rcw_inbr_merge %>%
-  mutate(count = 1) %>%
-  group_by(year) %>%
-  arrange(f_ped) %>%
-  ggplot() +
-  geom_bar(aes(x = year, y = count, fill = f_ped),
-           position = "stack", stat = "identity", width = 0.98) +
-  scale_fill_gradient(name = expression(italic(F)["p"]), 
-                      low = '#e5cce5', high = '#730073') +
-  geom_point(shape = 108, data = transloc_info_color,
-             aes(x = year, y = 0, color = RCWid), size = 4.5,
-             alpha = 1,
-             position = position_jitter(width = 0.35, height = 0, seed = 5345),
-             show.legend = FALSE) +
-  scale_color_manual(values = setNames(transloc_info_color$sex_color,
-                                       nm = transloc_info_color$RCWid)) +
-  scale_y_continuous(expand = expansion(mult = c(0, 0), add = c(0, 1))) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        panel.grid.minor = element_blank(),
-        panel.grid.major.x = element_line(linetype = 'dashed', color = '#d8d8d8'),
-        panel.border = element_blank(),
-        axis.line.x = element_line(color = '#4c4c4c', linewidth = 1.1),
-        axis.text.x = element_blank(),
-        axis.line.y = element_line(color = '#4c4c4c', linewidth = 1.5),
-        axis.ticks = element_line(color = '#808080', linewidth = 0.7),
-        axis.title.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        plot.margin=unit(c(0.32,1,-0.05,1), "cm"),
-        axis.title.y = element_blank()
-        ) +
-  scale_x_continuous(expand = c(0.01, 0), limits = c(1993.5, 2022.5)) +
-  coord_cartesian(clip = 'off')
-
-bottom_bar <- rcw_inbr_merge %>%
-  mutate(count = 1) %>%
-  group_by(year) %>%
-  arrange(anc_prop) %>%
-  ggplot() +
-  geom_bar(aes(x = year, y = count, fill = anc_prop),
-           position = "stack", stat = "identity", width = 0.98) +
-  scale_fill_gradient(name = 'Expected\ntranslocated\nancestry', low = '#ededed', high = '#4c4c4c') +
-  geom_point(shape = 108, data = transloc_info_color,
-             aes(x = year, y = 0, color = RCWid), size = 4.5,
-             alpha = 1,
-             position = position_jitter(width = 0.35, height = 0, seed = 5345),
-             show.legend = FALSE) +
-  scale_color_manual(values = setNames(transloc_info_color$sex_color,
-                                       nm = transloc_info_color$RCWid)) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        panel.grid.minor = element_blank(),
-        panel.grid.major.x = element_line(linetype = 'dashed', color = '#d8d8d8'),
-        panel.border = element_blank(),
-        axis.line.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        axis.line.y = element_line(color = '#4c4c4c', linewidth = 1.5)
-  ) +
-  scale_y_reverse(expand = expansion(mult = c(0, 0), add = c(1, 0))) +
-  theme(plot.margin=unit(c(-0.05,1,-0.05,1), "cm"),
-        axis.title.y = element_blank(),
-        axis.title.x = element_blank(),
-        axis.text.x = element_blank()#,
-        ) +
-  scale_x_continuous(expand = c(0.01, 0), limits = c(1993.5, 2022.5)) +
-  coord_cartesian(clip = 'off')
-
-transloc_ancestry <- rcw_inbr_merge %>% 
-  group_by(year) %>% 
-  summarize(transloc = sum(anc_prop)/n(),
-            .groups = 'drop') %>% 
-  mutate(nontransloc = 1 - transloc) %>% 
-  pivot_longer(cols = c(transloc, nontransloc),
-               names_to = 'ancestry_type',
-               values_to = 'ancestry_prop')  %>% 
-  ggplot() +
-  geom_bar(aes(x = year, y = ancestry_prop, fill = ancestry_type), 
-           color = 'white', linewidth = 0.5, width = 0.72,
-           position = "stack", stat = "identity") + 
-  scale_fill_manual(values = c('#ededed', '#4c4c4c')) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        panel.grid.minor = element_blank(),
-        panel.grid.major.x = element_line(linetype = 'dashed', color = '#d8d8d8'),
-        panel.border = element_blank(),
-        axis.line.x = element_line(color = '#4c4c4c', linewidth = 1.1),
-        axis.line.y = element_line(color = '#4c4c4c', linewidth = 1.5),
-        plot.margin = unit(c(0.25,1,0,1), "cm"),
-        axis.title.x = element_text(size = 18),
-        legend.position = 'none',
-        axis.title.y = element_text(margin = margin(t = 0, r = 6.6, b = 0, l = 0))
-  ) +
-  scale_y_continuous(breaks = c(0, 0.5, 1), 
-                     labels = c("0.0", "0.5", "1.0")) +
-  scale_x_continuous(expand = c(0.01, 0), limits = c(1993.5, 2022.5)) +
-  xlab('Year') +
-  ylab("Ancestry")
+if (isTRUE(output_results)) {
+  #output
+  output_list <- list(
+    #rcws_gdrop = rcws_gdrop,  #currently not outputting due to size
+    rcws_founder_info = rcws_founder_info,
+    rcws_inbr = rcws_inbr,
+    transloc_info_color = transloc_info_color,
+    ne_f_df = ne_f_df,
+    fped_prop_by_group = fped_prop_by_group,
+    inbr_founder_color = inbr_founder_color,
+    rcw_inbr_merge = rcw_inbr_merge,
+    rcws_ancestry_info = rcws_ancestry_info,
+    rcws_ancestry_source_by_year = rcws_ancestry_source_by_year,
+    rcw_partial_founder_summed_processed = rcw_partial_founder_summed_processed,
+    rcw_contr_info_df = rcw_contr_info_df
+  )
   
-rcw_pop_overview <- ggpubr::annotate_figure(egg::ggarrange(ne_plot,
-                                       top_bar,
-                                       bottom_bar,
-                                       transloc_ancestry,
-                                       nrow = 4,
-                                       labels = c('A', 'B', '', 'C'),
-                                       label.args = list(gp = grid::gpar(font = 2, cex = 1.2)),
-                                       heights = c(35, 50, 50, 10)),
-                        left = grid::textGrob("Individuals", rot = 90, hjust = 1.04, vjust = 5.2, gp = grid::gpar(cex = 1))) +
-  theme(plot.margin = unit(c(0.3, -0.8, 0, -0.45), "cm"))
-
-rcw_pop_overview_rcw <- rcw_pop_overview +
-  cowplot::draw_image(flying_rcw,
-                      scale = 0.18,
-                      x = 0.315, y = 0.35)
-
-if (isTRUE(output_figs)) {
-  cowplot::ggsave2(filename = here('figures', 'main_paper', 'rcw_pop_overview_fig.png'),
-                   plot = rcw_pop_overview_rcw,
-                   width = 10*1, height = 7.25*1, bg = 'white')
+  for (i in names(output_list)) {
+    
+    if (class(i) ==  'list') {
+      saveRDS(output_list[[i]], here('results', paste0(i, ".rds"))) #currently not outputting due to size
+    } else {
+      write.csv(x = output_list[[i]], 
+                file = here('results', paste0(i, ".csv")),
+                row.names = TRUE)
+    }
+    
+  }
+  
 }
-
-
-
-#################################################################
-### FIG 2: GENETIC CONTRIBUTIONS AND MORE INFO. ON INBREEDING ###
-#################################################################
-
-genetic_contr_plot <- rcw_contr_info_df %>%
-  group_by(id) %>%
-  filter(any(contr != 0)) %>% #filter out the ids with all 0s
-  filter(contr > 0 | (contr == 0 & year > max(year[contr > 0])  )) %>%
-  left_join(., rcws_founder_info,
-            by = 'id') %>%
-  ggplot() +
-  geom_line(data = . %>% 
-              filter(group == 'non-transloc'),
-            aes(x = year, y = contr, group = id, linewidth = `Founder type`),
-            color = '#e3e3e3', linewidth = 0.7) +
-  geom_point(data = . %>%
-               group_by(id) %>%
-               filter(year == min(year)) %>%
-               slice_head(n = 1)%>% 
-               filter(group == 'non-transloc'),
-             aes(x = year, y = contr),
-             color = '#e3e3e3', size = 0.7) +
-  geom_line(data = . %>% 
-              filter(group == 'transloc'),
-            aes(x = year, y = contr, group = id, 
-                linewidth = `Founder type`, color = id),
-            linewidth = 1.1) +
-  geom_point(data = . %>%
-               group_by(id) %>%
-               filter(year == min(year)) %>%
-               slice_head(n = 1)%>% 
-               filter(group == 'transloc'),
-             aes(x = year, y = contr, color = id),
-             size = 1.5) +
-  scale_color_manual(values = setNames(transloc_info_color$sex_color,
-                                       nm = transloc_info_color$RCWid)) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        panel.grid.minor = element_blank(),
-        panel.grid.major.x = element_line(linetype = 'dashed', color = '#d8d8d8'),
-        panel.border = element_blank(),
-        axis.line.x = element_blank(),
-        axis.line.y = element_line(color = '#4c4c4c', linewidth = 1.5),
-        axis.ticks = element_line(color = '#808080', linewidth = 0.7),
-        axis.title.x = element_blank(),
-        axis.ticks.x = element_blank(),
-        plot.margin = unit(c(0.32,1, 0, 1), "cm"),
-        legend.position = 'none',
-        axis.title.y = element_text(margin = margin(0, 12.5, 0, 0))
-  ) +
-  scale_x_continuous(expand = c(0.01, 0), 
-                     limits = c(1993.5, 2022.5),
-                     position = "top") +
-  xlab('Year') +
-  ylab("Exp. genetic contribution")
-
-
-fped_prop_by_indiv_founder_plot <- rcw_partial_founder_summed %>% 
-  group_by(founder_id, year) %>%
-  summarize(partial_founder_fped_sum = sum(partial_founder_fped),
-            group = first(group),
-            pop_size = first(pop_size),
-            .groups = 'drop') %>%
-  group_by(year) %>%
-  mutate(partial_founder_fped_sum_prop = partial_founder_fped_sum/sum(partial_founder_fped_sum)) %>% 
-  arrange(partial_founder_fped_sum_prop) %>% 
-  mutate(year_rank = factor(n():1, levels = n():1) ) %>% 
-  ungroup() %>% 
-  mutate(partial_founder_fped_sum_scaled = partial_founder_fped_sum/pop_size) %>% 
-  ggplot() +
-  geom_bar(aes(x = year, y = partial_founder_fped_sum_scaled, group = year_rank, fill = founder_id),
-           color = 'white', linewidth = 0.2,
-           position = "stack", stat = "identity", width = 0.98, alpha = 0.9) +
-  scale_fill_manual(values = setNames(inbr_founder_color$sex_color,
-                                       nm = inbr_founder_color$id)) +
-  theme_bw() +
-  theme(
-    panel.grid.major.y = element_blank(),
-    panel.grid.minor = element_blank(),
-    panel.grid.major.x = element_line(linetype = 'dashed', color = '#d8d8d8'),
-    panel.border = element_blank(),
-    axis.line.x = element_blank(),
-    axis.text.x = element_blank(),
-    axis.line.y = element_line(color = '#4c4c4c', linewidth = 1.5),
-    axis.ticks = element_line(color = '#808080', linewidth = 0.7),
-    axis.title.x = element_blank(),
-    axis.ticks.x = element_blank(),
-    plot.margin = unit(c(0.25,1,-0.05,1), "cm"),
-    legend.position = 'none') +
-  ylab(substitute(paste("Scaled ", italic(F)["p"]))) +
-  scale_x_continuous(expand = c(0.01, 0), limits = c(1993.5, 2022.5)) +
-  scale_y_continuous(expand = c(0, 0)) +
-  coord_cartesian(clip = 'off')
-
-
-fped_prop_by_group_plot <- fped_prop_by_group %>% 
-  ggplot() +
-  geom_bar(aes(x = year, y = fped_group_prop, fill = group), 
-           color = 'white', linewidth = 0.35, width = 0.70,
-           position = "stack", stat = "identity") + 
-  scale_fill_manual(values = c('#ededed', '#4c4c4c')) +
-  theme_bw() +
-  theme(panel.grid.major.y = element_blank(),
-        panel.grid.minor = element_blank(),
-        panel.grid.major.x = element_line(linetype = 'dashed', color = '#d8d8d8'),
-        panel.border = element_blank(),
-        axis.line.x = element_line(color = '#4c4c4c', linewidth = 1.1),
-        axis.line.y = element_line(color = '#4c4c4c', linewidth = 1.5),
-        plot.margin = unit(c(0.25,1,0,1), "cm"),
-        axis.title.x = element_text(size = 18),
-        legend.position = 'none',
-        axis.title.y = element_text(margin = margin(t = 0, r = 14, b = 0, l = 0))
-  ) +
-  scale_y_continuous(breaks = c(0, 0.5, 1), 
-                     labels = c("0.0", "0.5", "1.0")) +
-  scale_x_continuous(expand = c(0.01, 0), limits = c(1993.5, 2022.5)) +
-  xlab('Year') +
-  ylab(substitute(paste(italic(F)["p"], ' prop.')))
-
-
-indiv_fped_gencontr_panel <- egg::ggarrange(genetic_contr_plot,
-               fped_prop_by_indiv_founder_plot,
-               fped_prop_by_group_plot,
-               nrow = 3,
-               labels = c('A', 'B', 'C'),
-               label.args = list(gp = grid::gpar(font = 2, cex = 1.2)),
-               heights = c(65, 65, 10))
-
-indiv_fped_gencontr_panel_rcw <- cowplot::ggdraw(indiv_fped_gencontr_panel) +
-  cowplot::draw_image(perched_rcw,
-                      scale = 0.195,
-                      x = -0.3695, y = -.15) +
-  theme(plot.margin = unit(c(0.2, -0.7, 0, 0.1), "cm"))
-
-if (isTRUE(output_figs)) {
-  cowplot::ggsave2(filename = here('figures', 'main_paper', 'indiv_fped_gencontr_panel.png'),
-                   plot = indiv_fped_gencontr_panel_rcw,
-                   width = 10*1, height = 6.5*1, bg = 'white')
-}
-
 
 
 
 #################################
 ### CODE NOT CURRENTLY IN USE ###
 #################################
+# fped_prop_by_indiv_founder_plot_sex <- rcw_partial_founder_summed %>% 
+#   group_by(founder_id, year) %>%
+#   summarize(partial_founder_fped_sum = sum(partial_founder_fped),
+#             group = first(group),
+#             pop_size = first(pop_size),
+#             .groups = 'drop') %>%
+#   group_by(year) %>%
+#   mutate(partial_founder_fped_sum_prop = partial_founder_fped_sum/sum(partial_founder_fped_sum)) %>% 
+#   arrange(partial_founder_fped_sum_prop) %>% 
+#   mutate(year_rank = factor(1:n(), levels = n():1) ) %>% 
+#   ungroup() %>% 
+#   mutate(partial_founder_fped_sum_scaled = partial_founder_fped_sum/pop_size) %>% 
+#   ggplot() +
+#   geom_bar(aes(x = year, y = partial_founder_fped_sum_scaled, group = year_rank, fill = founder_id),
+#            color = 'white', linewidth = 0.2,
+#            position = "stack", stat = "identity", width = 0.98, alpha = 0.9) +
+#   scale_fill_manual(values = setNames(inbr_founder_color$sex_color,
+#                                        nm = inbr_founder_color$id)) +
+#   theme_bw() +
+#   theme(
+#     panel.grid.major.y = element_blank(),
+#     panel.grid.minor = element_blank(),
+#     panel.grid.major.x = element_line(linetype = 'dashed', color = '#d8d8d8'),
+#     panel.border = element_blank(),
+#     axis.line.x = element_blank(),
+#     axis.text.x = element_blank(),
+#     axis.line.y = element_line(color = '#4c4c4c', linewidth = 1.5),
+#     axis.ticks = element_line(color = '#808080', linewidth = 0.7),
+#     axis.title.x = element_blank(),
+#     axis.ticks.x = element_blank(),
+#     plot.margin = unit(c(0.25,1,-0.05,1), "cm"),
+#     legend.position = 'none') +
+#   ylab(substitute(paste("Scaled ", italic(F)["p"]))) +
+#   scale_x_continuous(expand = c(0.01, 0), limits = c(1993.5, 2022.5)) +
+#   scale_y_continuous(expand = c(0, 0)) +
+#   coord_cartesian(clip = 'off')
+
+
+# fped_prop_by_indiv_founder_plot_source_df <- rcw_partial_founder_summed %>% 
+#   group_by(founder_id, year) %>%
+#   summarize(partial_founder_fped_sum = sum(partial_founder_fped),
+#             group = first(group),
+#             pop_size = first(pop_size),
+#             .groups = 'drop') %>%
+#   group_by(year) %>%
+#   mutate(partial_founder_fped_sum_prop = partial_founder_fped_sum/sum(partial_founder_fped_sum)) %>% 
+#   arrange(partial_founder_fped_sum_prop) %>% 
+#   #mutate(year_rank = factor(n():1, levels = n():1) ) %>% 
+#   mutate(year_rank = factor(1:n(), levels = n():1) ) %>% 
+#   mutate(partial_founder_fped_sum_scaled = partial_founder_fped_sum/pop_size,
+#          partial_founder_fped_sum_scaled_cumsum_mdpt = cumsum(partial_founder_fped_sum_scaled) - ((partial_founder_fped_sum_scaled)*0.5)) %>% 
+#   ungroup()
+
+# fped_prop_by_indiv_founder_plot_source_df %>% 
+#   ggplot() +
+#   geom_bar(aes(x = year, y = partial_founder_fped_sum_scaled, group = year_rank, fill = founder_id),
+#            color = 'white', linewidth = 0.2,
+#            position = "stack", stat = "identity", width = 0.98, alpha = 0.9) +
+#   #geom_line(aes(x = year, y = partial_founder_fped_sum_scaled_cumsum_mdpt, 
+#   #              #group = year_rank, 
+#   #              color = founder_id)) +
+#   scale_fill_manual(values = setNames(inbr_founder_color$source_color,
+#                                       nm = inbr_founder_color$id)) +
+#   scale_color_manual(values = setNames(inbr_founder_color$source_color,
+#                                       nm = inbr_founder_color$id)) +
+#   theme_bw() +
+#   theme(
+#     panel.grid.major.y = element_blank(),
+#     panel.grid.minor = element_blank(),
+#     panel.grid.major.x = element_line(linetype = 'dashed', color = '#d8d8d8'),
+#     panel.border = element_blank(),
+#     axis.line.x = element_blank(),
+#     axis.text.x = element_blank(),
+#     axis.line.y = element_line(color = '#4c4c4c', linewidth = 1.5),
+#     axis.ticks = element_line(color = '#808080', linewidth = 0.7),
+#     axis.title.x = element_blank(),
+#     axis.ticks.x = element_blank(),
+#     plot.margin = unit(c(0.25,1,-0.05,1), "cm"),
+#     legend.position = 'none') +
+#   ylab(substitute(paste("Scaled ", italic(F)["p"]))) +
+#   scale_x_continuous(expand = c(0.01, 0), limits = c(1993.5, 2022.5)) +
+#   scale_y_continuous(expand = c(0, 0)) +
+#   coord_cartesian(clip = 'off')
+
+# transloc_ancestry <- rcw_inbr_merge %>% 
+#   group_by(year) %>% 
+#   summarize(transloc = sum(anc_prop)/n(),
+#             .groups = 'drop') %>% 
+#   mutate(nontransloc = 1 - transloc) %>% 
+#   pivot_longer(cols = c(transloc, nontransloc),
+#                names_to = 'ancestry_type',
+#                values_to = 'ancestry_prop')  %>% 
+#   ggplot() +
+#   geom_bar(aes(x = year, y = ancestry_prop, fill = ancestry_type), 
+#            color = 'white', linewidth = 0.5, width = 0.72,
+#            position = "stack", stat = "identity") + 
+#   scale_fill_manual(values = c('#ededed', '#4c4c4c')) +
+#   theme_bw() +
+#   theme(panel.grid.major.y = element_blank(),
+#         panel.grid.minor = element_blank(),
+#         panel.grid.major.x = element_line(linetype = 'dashed', color = '#d8d8d8'),
+#         panel.border = element_blank(),
+#         axis.line.x = element_line(color = '#4c4c4c', linewidth = 1.1),
+#         axis.line.y = element_line(color = '#4c4c4c', linewidth = 1.5),
+#         plot.margin = unit(c(0.25,1,0,1), "cm"),
+#         axis.title.x = element_text(size = 18),
+#         legend.position = 'none',
+#         axis.title.y = element_text(margin = margin(t = 0, r = 6.6, b = 0, l = 0))
+#   ) +
+#   scale_y_continuous(breaks = c(0, 0.5, 1), 
+#                      labels = c("0.0", "0.5", "1.0")) +
+#   scale_x_continuous(expand = c(0.01, 0), limits = c(1993.5, 2022.5)) +
+#   xlab('Year') +
+#   ylab("Ancestry")
+
+
 #rcw_pop_info_s3 <- rcw_processed_list$census_processed[rcw_processed_list$census_processed$Scenario3,]
 
 # rcw_pop_overview <- ggpubr::annotate_figure(egg::ggarrange(ne_plot,
