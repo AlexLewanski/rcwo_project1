@@ -16,12 +16,15 @@ library(here)
 
 here::here()
 
+output_processed_data <- FALSE
+output_census_eval_plots <- FALSE
+
 
 ### LOADING CUSTOM FUNCTIONS AND DATA ###
 
 #custom functions
 devtools::load_all('/Users/alexlewanski/Documents/r_packages/pedutils')
-source(here('scripts', 'data_processing_custom_functions.R'))
+source(here('scripts', 'rcw_project_custom_functions.R'))
 
 
 #data
@@ -255,120 +258,261 @@ raw_dat_list$nests$mid_dummy[match(dummy_female_info$NatalNest, raw_dat_list$nes
 ### OUTPUTTING PROCESSED DATA ###
 #################################
 
-write.csv(raw_dat_list$translocation,
-          here('data', 'feb2024_databasemarch2023_processed', 'translocation.csv'),
-          row.names = FALSE)
-
-write.csv(pop_filters_df,
-          here('data', 'feb2024_databasemarch2023_processed', 'census_processed.csv'),
-          row.names = FALSE)
-
-write.csv(raw_dat_list$nests,
-          here('data', 'feb2024_databasemarch2023_processed', 'nests_processed.csv'),
-          row.names = FALSE)
-
-write.csv(raw_dat_list$rcws,
-          here('data', 'feb2024_databasemarch2023_processed', 'rcws.csv'),
-          row.names = FALSE)
-
-write.csv(rcws_ped_dummy_pars$ped,
-          here('data', 'feb2024_databasemarch2023_processed', 'ped_processed.csv'),
-          row.names = FALSE)
-
-write.csv(rcws_ped_dummy_pars$dummy_ids,
-          here('data', 'feb2024_databasemarch2023_processed', 'dummy_parents_info.csv'),
-          row.names = FALSE)
-
-
-
-
-
-as.data.frame(raw_dat_list$translocation[ raw_dat_list$translocation$Type == 'Inter-population',])
+if (isTRUE(output_processed_data)) {
+  write.csv(raw_dat_list$translocation,
+            here('data', 'feb2024_databasemarch2023_processed', 'translocation.csv'),
+            row.names = FALSE)
+  
+  write.csv(pop_filters_df,
+            here('data', 'feb2024_databasemarch2023_processed', 'census_processed.csv'),
+            row.names = FALSE)
+  
+  write.csv(raw_dat_list$nests,
+            here('data', 'feb2024_databasemarch2023_processed', 'nests_processed.csv'),
+            row.names = FALSE)
+  
+  write.csv(raw_dat_list$rcws,
+            here('data', 'feb2024_databasemarch2023_processed', 'rcws.csv'),
+            row.names = FALSE)
+  
+  write.csv(rcws_ped_dummy_pars$ped,
+            here('data', 'feb2024_databasemarch2023_processed', 'ped_processed.csv'),
+            row.names = FALSE)
+  
+  write.csv(rcws_ped_dummy_pars$dummy_ids,
+            here('data', 'feb2024_databasemarch2023_processed', 'dummy_parents_info.csv'),
+            row.names = FALSE)
+}
 
 
 
+#################################
+### EXPLORING DATA PROCESSING ###
+#################################
 
-
-
-
-
-scenarios_long_list %>% 
+pop_count_scenario_plot <- scenarios_long_list %>% 
   bind_rows(.id = 'scenario') %>% 
   group_by(scenario, year) %>% 
   summarize(`Census count` = n(),
             .groups = 'drop') %>% 
   ggplot(aes(x = year, y = `Census count`, color = scenario)) +
   geom_line(alpha = 1.75, linewidth = 0.5) +
-  geom_point(size = 2.5) +
+  geom_point(size = 2.75, alpha = 0.7) +
   scale_color_manual(values = c('#2a9d8f', '#e76f51', '#a64ca6', 'gray')) +
+  theme_bw() +
+  theme(panel.border = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank(),
+        axis.text = element_text(size = 12),
+        axis.title = element_text(size = 15),
+        axis.line = element_line(color = '#4c4c4c', linewidth = 1.5),
+        axis.ticks = element_line(color = '#808080', linewidth = 0.7),
+        #panel.grid.major.x = element_line(linetype = 'dashed', 
+        #                                  color = '#d8d8d8'),
+        #legend.position = 'none',
+        legend.title = element_blank()) +
+  xlab('Year') +
+  ylab('Population size')
+
+
+pop_size_cor_mat_viz <- scenarios_long_list %>% 
+  bind_rows(.id = 'scenario') %>% 
+  group_by(scenario, year) %>% 
+  summarize(`Census count` = n(),
+            .groups = 'drop') %>% 
+  pivot_wider(names_from = scenario, 
+              values_from = `Census count`
+              ) %>% 
+  column_to_rownames(var = 'year') %>% 
+  cor() %>% 
+  as.data.frame() %>% 
+  rownames_to_column(var = 'scenario1') %>% 
+  pivot_longer(cols = !scenario1, names_to = 'scenario2', values_to = 'cor') %>% 
+  mutate(scenario1_num = as.numeric(gsub("Scenario", "", scenario1)),
+         scenario2_num = as.numeric(gsub("Scenario", "", scenario2))) %>% 
+  filter(scenario1_num >= scenario2_num) %>% 
+  ggplot() +
+  geom_tile(aes(x = scenario2_num, y = scenario1_num, fill = cor),
+            color = 'white', size = 0.8) +
+  geom_text(aes(x = scenario2_num, y = scenario1_num, label = round(cor, 4)),
+            size = 3.5) +
+  theme_bw() +
+  theme(panel.border = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major.x = element_line(color = '#d8d8d8'),
+        axis.title = element_blank(),
+        axis.text = element_text(size = 13,
+                                 colour = c('#2a9d8f', '#e76f51', '#a64ca6', 'gray'),
+                                 face = 'bold'),
+        legend.position = 'none') +
+  scale_fill_gradient(low = '#d9d9d9', high = '#999999') +
+  scale_x_continuous(expand = c(0, 0)) +
+  scale_y_continuous(expand = c(0, 0)) 
+  
+
+pop_count_scenario_plot_w_cor <- pop_count_scenario_plot +
+  patchwork::inset_element(pop_size_cor_mat_viz,
+                         left = 0.1, bottom = 0.6, right = 0.5, top = 1
+                         )
+
+if (isTRUE(output_census_eval_plots)) {
+  cowplot::ggsave2(filename = here('figures', 'supplement', 'figures', 'pop_count_scenario_plot_w_cor.png'),
+                   plot = pop_count_scenario_plot_w_cor,
+                   width = 8.5*1, height = 6.25*1, bg = 'white')
+}
+
+
+observation_type_val <- round(table(scenarios_long_list$Scenario3$row_origin)/length(scenarios_long_list$Scenario3$row_origin), 4)*100
+
+
+obs_vs_deduced_barplot <- scenarios_long_list$Scenario3 %>% 
+  group_by(year, row_origin) %>%
+  summarize(year_count = n(), .groups = 'drop') %>%
+  mutate(`Observation\ntype` = factor(row_origin, levels = c('observed', 'deduced'))) %>% 
+  group_by(year) %>% 
+  mutate(count_perc = (year_count/sum(year_count))*100 ) %>%
+  ggplot() +
+  geom_bar(aes(x = year, y = year_count, fill = `Observation\ntype`), stat = "identity") +
+  #geom_text(stat='count', aes(label = after_stat(count)), vjust=-1) +
+  xlab('Year') +
+  ylab('Population size') +
+  scale_fill_manual(values = c('#d6d6d6', '#666666')) +
+  coord_cartesian(clip = 'off') +
+  geom_text(data = . %>%
+              group_by(year) %>% 
+              mutate(total = sum(year_count)) %>% 
+              filter(`Observation\ntype` == 'observed'),
+            aes(x = year, y = total, label = round(count_perc, 1) ),
+            vjust = -0.25, size = 3) +
+  geom_text(data = . %>%
+              filter(`Observation\ntype` == 'deduced'),
+            aes(x = year, y = year_count, label = round(count_perc, 1) ),
+            vjust = -0.25, size = 3) +
+  annotate('text', x = 1994, y = 157,
+           label = paste0('Overall deduced: ', round(observation_type_val['deduced'], 2), '%\nOverall observed: ', round(observation_type_val['observed'], 2), '%'),
+           hjust = 0,
+           size = 5) +
+  theme_bw() +
+  theme(panel.border = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(),
+        panel.grid.major.x = element_line(linetype = 'dashed', 
+                                          color = '#d8d8d8'),
+        axis.line = element_line(color = '#4c4c4c', linewidth = 1.5),
+        axis.ticks.x = element_line(color = '#808080', linewidth = 0.7))
+
+if (isTRUE(output_census_eval_plots)) {
+  cowplot::ggsave2(filename = here('figures', 
+                                   'supplement', 
+                                   'figures', 
+                                   'obs_vs_deduced_barplot.png'),
+                 plot = obs_vs_deduced_barplot,
+                 width = 8.75*1.1, height = 5.5*1.1, bg = 'white')
+}
+
+
+
+
+missing_census_info <- lapply(split(scenarios_long_list$Scenario1, scenarios_long_list$Scenario1$RCWid), function(x) {
+  dif_vec <- sort(x$year, decreasing = TRUE)[-length(x$year)] - sort(x$year, decreasing = TRUE)[-1]
+  dif_vec1 <- dif_vec[dif_vec > 1] - 1
+  if (length(dif_vec1) == 0) dif_vec1 <- 0
+  
+  return(data.frame(gap_count = dif_vec1))
+}) %>%
+  bind_rows(.id = 'RCWid')
+
+
+
+
+missing_census_info <- lapply(split(summer_census_detected, summer_census_detected$RCWid), function(x) {
+  dif_vec <- sort(x$year, decreasing = TRUE)[-length(x$year)] - sort(x$year, decreasing = TRUE)[-1]
+  dif_vec1 <- dif_vec[dif_vec > 1] - 1
+  if (length(dif_vec1) == 0) dif_vec1 <- 0
+
+  return(data.frame(gap_count = dif_vec1))
+}) %>%
+  bind_rows(.id = 'RCWid')
+
+
+
+census_gaps_barplot <- missing_census_info %>%
+  group_by(gap_count) %>%
+  #summarize(Count = n(), .groups = 'drop') %>%
+  mutate(gap_count = factor(gap_count)) %>%
+  ggplot(aes(x = gap_count)) +
+  geom_bar() +
+  geom_text(stat='count', aes(label=after_stat(count)), vjust=-1) +
+  xlab('Census separation') +
+  ylab('Year') +
+  annotate('text', x = '1', y = 600,
+           label = ifelse(any(table(missing_census_info$RCWid) > 1),
+                          'Some individuals have\nmore than one gap',
+                          'Each individual has\nat most one gap'),
+           hjust = 0,
+           size = 5) +
+  theme_bw() +
+  theme(plot.margin = margin(15, 0, 0, 0),
+        panel.border = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_blank(),
+        axis.line = element_line(color = '#4c4c4c', linewidth = 1.5),
+        axis.ticks.x = element_line(color = '#808080', linewidth = 0.7),
+        panel.grid = element_blank()) +
+  coord_cartesian(clip = 'off')
+# 
+# ggsave(plot = census_gaps_barplot,
+#        here('data_exploration', 'census_gaps_barplot.png'),
+#        width = 6, height = 4)
+  
+census_gaps_barplot <- missing_census_info %>%
+  group_by(gap_count) %>%
+  #summarize(Count = n(), .groups = 'drop') %>%
+  mutate(gap_count = factor(gap_count)) %>%
+  ungroup() %>% 
+  group_by(count_percentage = sum()) +
+  mutate(count_perc = (count/sum(count))*100 ) %>% 
+  ggplot(aes(x = gap_count)) +
+  geom_bar() +
+  geom_text(stat='count', aes(label = after_stat(count)), vjust=-1) +
+  xlab('Census separation') +
+  ylab('Year') +
   theme_classic() +
-  theme(legend.title = element_blank()) +
-  xlab('Year')
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+  theme(plot.margin = margin(15, 0, 0, 0)) +
+  coord_cartesian(clip = 'off') +
+  annotate('text', x = '1', y = 600,
+           label = ifelse(any(table(missing_census_info$RCWid) > 1),
+                          'Some individuals have\nmore than one gap',
+                          'Each individual has\nat most one gap'),
+           hjust = 0,
+           size = 5) +
+  xlab('Year') + ylab('Census count')
+
+
+if (isTRUE(output_census_eval_plots)) {
+  cowplot::ggsave2(plot = census_gaps_barplot,
+         here('data_exploration', 'census_gaps_barplot.png'),
+         width = 6, height = 4)
+}
+
+
+
+#################################
+### CODE NOT CURRENTLY IN USE ###
+#################################
+
+#   scale_fill_manual(name = 'Observation type', 
+#                     values = c('#2a9d8f', '#e76f51')) + #c('#e5e5e5', 'purple')) +
+#   geom_text(aes(x = year, y = count, label = round(count_perc, 1) ), 
+#             #position = position_dodge(width = 0.9), 
+#             vjust = -0.25) +
+#   annotate('text', x = 1998, y = 155, 
+#            label = paste0('Overall deduced: ', round(observation_type_val['deduced'], 2), '%\nOverall observed: ', round(observation_type_val['observed'], 2), '%'),
+#            hjust = 0,
+#            size = 5) +
+#   theme_classic() +
+#   xlab('Year') + ylab('Census count')
+# 
 
 
 # observation_type_val <- (table(summer_census_detected_addint$row_origin)/nrow(summer_census_detected_addint))*100
@@ -395,18 +539,10 @@ scenarios_long_list %>%
 #             census_minage_addint_summarize)
 # 
 # 
-# 
-# census_summarized
-# 
-# 
-# 
 # cor_mat <- pivot_wider(census_summarized, names_from = 'name', values_from = "Census count") %>% 
 #   select(observed, `observed + deduced`, `observed + deduced (min age)`) %>% 
 #   na.omit() %>% 
 #   cor(method = 'pearson')
-# 
-# 
-# 
 # 
 # census_plot_scenarios <- census_summarized %>% 
 #   ggplot(aes(x = year, y = `Census count`, color = name)) +
@@ -424,13 +560,6 @@ scenarios_long_list %>%
 #            label = paste0('obs vs. obs + deduced (minage): cor = ', round(cor_mat[1,3], 3)),
 #            hjust = 0,
 #            size = 4)
-# 
-# 
-# 
-# 
-# 
-# 
-# 
 # 
 # 
 # deduced_vs_observed_plot <- summer_census_detected_addint %>% 
@@ -460,11 +589,6 @@ scenarios_long_list %>%
 #        here('data_exploration', 'deduced_vs_observed_plot.png'),
 #        width = 8*1.5, height = 4*1.5)
 # 
-# 
-# 
-# 
-# 
-# 
 # census_gaps_barplot <- missing_census_info %>% 
 #   group_by(gap_count) %>% 
 #   #summarize(Count = n(), .groups = 'drop') %>% 
@@ -487,10 +611,6 @@ scenarios_long_list %>%
 # ggsave(plot = census_gaps_barplot,
 #        here('data_exploration', 'census_gaps_barplot.png'),
 #        width = 6, height = 4)
-# 
-# 
-# 
-# 
 # 
 # 
 # 
