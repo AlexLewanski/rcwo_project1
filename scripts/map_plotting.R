@@ -1,8 +1,34 @@
-###########################
-###########################
-### STUDY SYSTEM MAP(S) ###
-###########################
-###########################
+##############################################################################################
+### SCRIPT NAME: map_plotting.R
+### PURPOSE: create map of RCW distribution and study populations
+### PRODUCT:
+###     rcw_range_pop_map.png: study system map (included in the supplementary material)
+##############################################################################################
+
+
+#######################
+### BACKGROUND INFO ###
+#######################
+
+### NAMES ###
+#APAFR: Avon Park
+#ONF: Osceola National Forest
+#FTS: Fort Stewart
+#WSF-CITRUS: Withlacoochee State Forest - Citrus
+#FTB: Fort Benning
+#ANF: Apalachicola National Forest
+#CBJTC: Camp Blanding Joint Training Center
+
+### COORDINATES FOR MAPPING ###
+#APAFR: 27.644521, -81.343642
+#ONF: 30.270959, -82.495517
+#FTS: 31.875167, -81.615220
+#WSF-CITRUS: 28.718578, -82.490166
+#FTB: 32.359721, -84.949391
+#ANF: 30.083168, -84.746376
+#CBJTC: 29.985615, -81.993976
+
+
 
 ##########################
 ### SCRIPT PREPARATION ###
@@ -38,7 +64,7 @@ rcw_resident <- load_raster("Red-cockaded Woodpecker",
                             product = "abundance", 
                             period = "seasonal",
                             metric = "mean",
-                            resolution = "9km")[['resident']]
+                            resolution = "3km")[['resident']]
 
 us_mexico_map <- rnaturalearth::ne_states(country = c("United States of America", "Mexico"),
                        returnclass = "sf") %>% 
@@ -51,8 +77,8 @@ rcw_resident_laea <- terra::project(rcw_resident, crs_laea, method = 'near') |>
 
 pop_order <- c('APAFR', 'ONF', 'FTS', 'WSF-CITRUS', 'FTB', 'ANF', 'CBJTC')
 pop_df <- data.frame(pop = c("ANF", "CBJTC", "FTB", "FTS", "ONF", "WSF-CITRUS", "APAFR"),
-                     lat = c(30.207865, 29.984685, 31.447247, 33.504599, 30.200350, 28.716566, 27.644521), 
-                     lon = c(-84.663056, -81.989727, -84.345396, -83.389586, -82.442920, -82.493976, -81.343642),
+                     lat = c(30.083168, 29.985615, 32.359721, 31.875167, 30.270959, 28.718578, 27.644521), 
+                     lon = c(-84.746376, -81.993976, -84.949391, -81.615220, -82.495517, -82.490166, -81.343642),
                      size = c(21, 1, 4, 16, 6, 6, 126),
                      color = c("#f0597d", "#ffdb19", "#595959", "#06d6a0", "#118ab2", "#800080", 'black'))
 
@@ -68,16 +94,23 @@ apafr_vec <- vect(cbind(pop_df[pop_df$pop == 'APAFR',,drop=FALSE]$lon,
 apafr_vec_proj <- terra::project(apafr_vec, 
                                    crs_laea)
 
+rcw_load_map_params <- load_fac_map_parameters("Red-cockaded Woodpecker", 
+                                               path = ebirdst_data_dir())
+color_generator <- colorRampPalette(c("#eac7b7","#814d36"))
+
 
 ### CREATING MAP ###
 png(here('figures', 'supplement', 'figures', 'rcw_range_pop_map.png'), 
-    width = 8, height = 6.4, units = "in", res = 500)
+    width = 8, height = 6.4, units = "in", res = 1000)
 par(mar = c(0.5, 0.5, 0.5, 2)) #bottom, left, top, right
 plot(us_mexico_map, xlim  = c(-1.2e06, 1e06), ylim = c(-8.5e05, 8e05),
-     col = '#f2f2f2', bg = 'white', grid = TRUE, border = "#d8d8d8", lwd = 1.9)
+     col = '#f9f9f9', bg = 'white', grid = TRUE, border = "#d8d8d8", lwd = 1.9)
 plot(rcw_resident_laea, grid = FALSE,
-     breaks = c(0, pars$seasonal_bins),
-     col = c(NA, rep(c("#dca388", "#90563c", "#673e2b"), each = 7)),
+     #breaks = c(0, pars$seasonal_bins),
+     #col = c(NA, rep(c("#dca388", "#90563c", "#673e2b"), each = 7)),
+     breaks = c(0, rcw_load_map_params$seasonal_bins),
+     #col = c(NA, rep(c("#dca388", "#90563c", "#673e2b"), each = 7)),
+     col = c(NA, color_generator(length(rcw_load_map_params$seasonal_bins))),
      xlim  = c(-1.2e06, 1e06), ylim = c(-9e05, 8e05),
      legend = FALSE, axes = FALSE, maxpixels = ncell(rcw_resident_laea),
      add = TRUE)
@@ -91,27 +124,34 @@ sbar(500000, xy = c(6e5, -8.8e5),
      cex = 0.8, below = "km",
      label = c(0, 250, 500), ticks = FALSE, 
      lwd = 2)
-legend(x = 7e5, 
+legend(x = 7.5e5, 
        y = 2e5,
         legend = pop_order,
         pt.bg = c(NA, pop_df$color[match(pop_order, pop_df$pop)][-1]),
        pt.cex = c(1.8, rep(1.25, 6)),
        col = 'black', cex = 0.8,
-       pch = c(18, rep(21, 6)), bty = "n")
+       pch = c(18, rep(21, 6)), 
+       bty = "n")
+
+text(x = 7.75e5, 
+     y = -4.3e5,
+     adj = c(0, 0),
+     cex = 0.85,
+     'Relative\nabundance')
+
+legend(x = 7.45e5, 
+       y = -4.5e5,
+       legend = c('high', rep(NA, length(rcw_load_map_params$seasonal_bins) - 2 ), 'low'),
+       fill = rev(color_generator(length(rcw_load_map_params$seasonal_bins))),
+       border = NA,
+       y.intersp = 0.14,
+       cex = 0.8,
+       text.font = 1,
+       bty = "n",
+       #title = 'Abundance',
+       horiz = FALSE)
 dev.off()
 
-
-
-### POPULATON INFO ###
-#"ANF", "CBJTC", "FTB", "FTS", "ONF", "WSF-CITRUS", "APAFR"
-
-#ANF (Apalachicola National Forest?): 30.207865, -84.663056
-#CBJTC (Camp Blanding Joint Training Center?): 29.984685, -81.989727
-#FTB (UNCLEAR): 31.447247, -84.345396
-#FTS (UNCLEAR): 33.504599, -83.389586
-#ONF (Osceola National Forest?): 30.200350, -82.442920
-#WSF-CITRUS (Withlacoochee State Forest?): 28.716566, -82.493976
-#APAFR: 27.644521, -81.343642
 
 ### RESOURCES ###
 #https://stackoverflow.com/questions/75928646/cannot-use-project-function-to-reproject-spatvector-to-epsg3035
@@ -187,12 +227,3 @@ dev.off()
 #   theme(panel.background = element_blank()) 
 #           
 # plot(st_geometry(rcw_range_2022))
-
-
-
-
-
-
-
-
-
