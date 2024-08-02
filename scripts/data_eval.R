@@ -1,15 +1,33 @@
-########################################################
-########################################################
-### RCW DATA EXPLORATION, EVALUATION, AND PROCESSING ###
-########################################################
-########################################################
+##############################################################################################
+### SCRIPT NAME: data_eval.R
+### PURPOSE: explore, process, and evaluate the pedigree and census data. Get things ready for analysis!
+### PRODUCTS:
+###     translocation.csv: info on translocated individuals
+###     census_processed.csv: processed census data
+###     nests_processed.csv: info. on all nesting events
+###     rcws.csv: info on each individual RCW that has been documented in the population
+###     ped_processed.csv: processed version of the population pedigree
+###     dummy_parents_info.csv: info on the dummy parents that were added to the pedigree
+###     pop_count_scenario_plot_w_cor.png: plot of pop size based on the different approaches
+###                                        to processing the census data
+###     obs_vs_deduced_barplot.png: plot showing the percentage of observed and deduced
+###                                 observations found each year in the scenario 3
+###                                 census data (this is the processed version that is
+###                                 used in the paper).
+##############################################################################################
+
 
 #####################
 ### SCRIPT SET-UP ###
 #####################
 
 ### PACKAGES ###
-library(tidyverse)
+#library(tidyverse)
+library(dplyr)
+library(purrr)
+library(ggplot2)
+library(tidyr)
+library(tibble)
 library(readxl)
 library(clock)
 library(here)
@@ -23,11 +41,12 @@ output_census_eval_plots <- FALSE
 ### LOADING CUSTOM FUNCTIONS AND DATA ###
 
 #custom functions
-devtools::load_all('/Users/alexlewanski/Documents/r_packages/pedutils')
+#devtools::load_all('/Users/alexlewanski/Documents/r_packages/pedutils')
+source(here('scripts', 'ped_functions.R'))
 source(here('scripts', 'rcw_project_custom_functions.R'))
 
 
-#data
+#loading unprocessed data
 file_names <- c('Nests.xlsx', 'RCWs.xlsx', 'RCWs_wout_format.xlsx', 'LastSeenDetail.xlsx', 'Translocation.xlsx')
 raw_dat_list <- lapply(setNames(file_names, tolower(gsub('\\.xlsx', '', file_names))), function(x) {
   read_excel(here('data', 'feb2024_databasemarch2023', x))
@@ -44,15 +63,15 @@ raw_dat_list <- lapply(setNames(file_names, tolower(gsub('\\.xlsx', '', file_nam
 
 #filter census data down to the post-breeding census where birds were actually observed
 summer_census_detected <- raw_dat_list$lastseendetail %>% 
-  filter(Detected == 'Yes' & SurveyType == "Census")  %>% 
-  filter(get_month(RecordDate) >= 6 & get_month(RecordDate) <= 8) %>% 
-  mutate(year = get_year(RecordDate))  %>% 
-  mutate(RCWid_old = RCWid) %>% 
-  mutate(RCWid = case_when(year < 2005 & RCWid == 'GB=Z' ~ 'GB-Z',
+  filter(Detected == 'Yes' & SurveyType == "Census")  %>% #birds that were seen during censuses
+  filter(get_month(RecordDate) >= 6 & get_month(RecordDate) <= 8) %>% #limit to post-breeding census
+  mutate(year = get_year(RecordDate)) %>% #extract census year
+  mutate(RCWid_old = RCWid) %>% #retain original ID in column named RCWid_old
+  mutate(RCWid = case_when(year < 2005 & RCWid == 'GB=Z' ~ 'GB-Z', #fix GB-Z
                            TRUE ~ RCWid)) %>% 
   select(RCWid, Detected, SurveyType, year) %>% 
   group_by(RCWid, year) %>% 
-  slice_head(n = 1) #if there are more than one observations/indiv/census, keep only one observation
+  slice_head(n = 1) #if there are more than one observations/indiv/census, keep only one
 
 
 #filter rcws info down to birth information
@@ -82,18 +101,23 @@ obs_info_combine_addint1 <- obs_info_combine_addint %>%
   mutate(Origin_update = case_when(is.na(Origin) ~ 'unknown',
                                    TRUE ~ Origin))
 
+
 #unknown_indivs <- unique(obs_info_combine_addint1[obs_info_combine_addint1$Origin_update == 'unknown',]$RCWid)
 
 
+### PROCESS THE CENSUS DATA ###
+#the obs_info_combine_addint1 contains a row for each census observation starting
+#at an individual's hatch year (if the bird was locally hatched) and a row for each
+#year where a bird was seen in earlier and later years but not in the focal year
 pop_filters_df <- lapply(split(obs_info_combine_addint1, obs_info_combine_addint1$RCWid), function(DF) {
   
   #1: CENSUS_ONLY
-  #Only census observations
+  #INFO: Only census observations
   DF$Scenario1 <- DF$SurveyType %in% 'Census'
   
   #2: CENSUS + DEDUCED
-  #Census observations and filling in the the gaps between non-consecutive 
-  #census observations
+  #INFO: Census observations and filling in the the gaps between non-consecutive 
+  #census observations.
   if ('Census' %in% DF$SurveyType) {
     first_year <- min(DF$year[DF$SurveyType %in% 'Census'])
     DF$Scenario2 <- DF$year >= first_year
@@ -101,9 +125,14 @@ pop_filters_df <- lapply(split(obs_info_combine_addint1, obs_info_combine_addint
     DF$Scenario2 <- FALSE
   }
   
-  #3: CENSUS/BIRTH + DEDUCED (INCLUDE BIRTH YEAR IF FLEDGED, BORN IN THE POP, AND FOUND IN A SUBSEQUENT CENSUS)
-  #Similar to 2. Include all census observations but for birds born in the population, record 
-  #the start year as the year where the 
+  #3: CENSUS/BIRTH + DEDUCED (INCLUDE BIRTH YEAR IF FLEDGED, HATCHED IN THE POP, AND FOUND IN A SUBSEQUENT CENSUS)
+  #Similar to 2. Include all census observations but for birds hatched in the population, record 
+  #the start year as the year where the
+  
+  #for individuals where their origin isn't known or are likely immigrants that didn't hatch locally, 
+  #include all census observations and any missing years between census observations. 
+  #For locally hatched and translocated individuals, include all years between the
+  #first year they were known to be in the population to last census observation year
   if (DF$Origin_update[1] %in% c('Immigrant', 'unknown')) {
     
     if ('Census' %in% DF$SurveyType) {
@@ -158,8 +187,11 @@ pop_filters_df <- lapply(split(obs_info_combine_addint1, obs_info_combine_addint
   bind_rows() %>% 
   group_by(year, RCWid) %>% 
   mutate(Scenario2 = case_when(sum(Scenario2) > 1 ~ c(TRUE, rep(FALSE, length(Scenario2) - 1)),
-                         TRUE ~ Scenario2))
+                         TRUE ~ Scenario2)) %>% 
+  ungroup()
 
+  
+#each scenario stored in its own dataframe
 scenarios_long_list <- lapply(setNames(nm = paste0('Scenario', 1:4)), function(x, pop_info) {
   pop_info[pop_info %>% pull(x),]
 }, pop_info = pop_filters_df)
@@ -172,6 +204,7 @@ count_ind_year_scenario <- scenarios_long_list %>%
   pull(count)
 
 
+#checking that for each processing scenarios, each indiv is only found once
 message("Are all individuals found at most once a year in the processed census info?: ", all(count_ind_year_scenario == 1))
 
 
@@ -184,6 +217,7 @@ year_seq_ind_year_scenario <- scenarios_long_list %>%
   pull(year_check) %>% 
   all()
 
+#for scenarios 2--4, are individuals found reported in a continuous span of years?
 message("Are all individuals found over a continuous sequence of years in the processed census info?: ", year_seq_ind_year_scenario)
 
 
@@ -236,11 +270,6 @@ message('Do all sires have an entry (i.e., are found in the column)? ', sire_che
 message('Do all dams have an entry (i.e., are found in the column)? ', dam_check)
 message('Are there any repeated entries for individuals in the pedigree file? ', any(duplicated(rcws_ped_dummy_pars$ped$id)))
 
-
-
-###########################
-### PEDIGREE PROCESSING ###
-###########################
 
 ### ADD DUMMY PARENTS TO THE NEST INFORMATION
 raw_dat_list$nests$fid_dummy <- raw_dat_list$nests$MaleID
@@ -333,7 +362,7 @@ pop_size_cor_mat_viz <- scenarios_long_list %>%
   filter(scenario1_num >= scenario2_num) %>% 
   ggplot() +
   geom_tile(aes(x = scenario2_num, y = scenario1_num, fill = cor),
-            color = 'white', size = 0.8) +
+            color = 'white', linewidth = 0.8) +
   geom_text(aes(x = scenario2_num, y = scenario1_num, label = round(cor, 4)),
             size = 3.5) +
   theme_bw() +
@@ -351,12 +380,18 @@ pop_size_cor_mat_viz <- scenarios_long_list %>%
   
 
 pop_count_scenario_plot_w_cor <- pop_count_scenario_plot +
-  patchwork::inset_element(pop_size_cor_mat_viz,
-                         left = 0.1, bottom = 0.6, right = 0.5, top = 1
+  patchwork::inset_element(p = pop_size_cor_mat_viz,
+                         left = 0.1, 
+                         bottom = 0.6, 
+                         right = 0.5, 
+                         top = 1
                          )
 
 if (isTRUE(output_census_eval_plots)) {
-  cowplot::ggsave2(filename = here('figures', 'supplement', 'figures', 'pop_count_scenario_plot_w_cor.png'),
+  cowplot::ggsave2(filename = here('figures', 
+                                   'supplement', 
+                                   'figures', 
+                                   'pop_count_scenario_plot_w_cor.png'),
                    plot = pop_count_scenario_plot_w_cor,
                    width = 8.5*1, height = 6.25*1, bg = 'white')
 }
@@ -412,7 +447,6 @@ if (isTRUE(output_census_eval_plots)) {
 
 
 
-
 missing_census_info <- lapply(split(scenarios_long_list$Scenario1, scenarios_long_list$Scenario1$RCWid), function(x) {
   dif_vec <- sort(x$year, decreasing = TRUE)[-length(x$year)] - sort(x$year, decreasing = TRUE)[-1]
   dif_vec1 <- dif_vec[dif_vec > 1] - 1
@@ -421,8 +455,6 @@ missing_census_info <- lapply(split(scenarios_long_list$Scenario1, scenarios_lon
   return(data.frame(gap_count = dif_vec1))
 }) %>%
   bind_rows(.id = 'RCWid')
-
-
 
 
 missing_census_info <- lapply(split(summer_census_detected, summer_census_detected$RCWid), function(x) {
@@ -435,6 +467,9 @@ missing_census_info <- lapply(split(summer_census_detected, summer_census_detect
   bind_rows(.id = 'RCWid')
 
 
+#total number of census gaps
+message('total number of census gaps: ', sum(missing_census_info$gap_count > 0))
+table(missing_census_info$gap_count) # gap size in years
 
 census_gaps_barplot <- missing_census_info %>%
   group_by(gap_count) %>%
@@ -465,35 +500,35 @@ census_gaps_barplot <- missing_census_info %>%
 #        here('data_exploration', 'census_gaps_barplot.png'),
 #        width = 6, height = 4)
   
-census_gaps_barplot <- missing_census_info %>%
-  group_by(gap_count) %>%
-  #summarize(Count = n(), .groups = 'drop') %>%
-  mutate(gap_count = factor(gap_count)) %>%
-  ungroup() %>% 
-  group_by(count_percentage = sum()) +
-  mutate(count_perc = (count/sum(count))*100 ) %>% 
-  ggplot(aes(x = gap_count)) +
-  geom_bar() +
-  geom_text(stat='count', aes(label = after_stat(count)), vjust=-1) +
-  xlab('Census separation') +
-  ylab('Year') +
-  theme_classic() +
-  theme(plot.margin = margin(15, 0, 0, 0)) +
-  coord_cartesian(clip = 'off') +
-  annotate('text', x = '1', y = 600,
-           label = ifelse(any(table(missing_census_info$RCWid) > 1),
-                          'Some individuals have\nmore than one gap',
-                          'Each individual has\nat most one gap'),
-           hjust = 0,
-           size = 5) +
-  xlab('Year') + ylab('Census count')
+# census_gaps_barplot <- missing_census_info %>%
+#   group_by(gap_count) %>%
+#   #summarize(Count = n(), .groups = 'drop') %>%
+#   mutate(gap_count = factor(gap_count)) %>%
+#   ungroup() %>% 
+#   group_by(count_percentage = sum()) +
+#   mutate(count_perc = (count/sum(count))*100 ) %>% 
+#   ggplot(aes(x = gap_count)) +
+#   geom_bar() +
+#   geom_text(stat='count', aes(label = after_stat(count)), vjust=-1) +
+#   xlab('Census separation') +
+#   ylab('Year') +
+#   theme_classic() +
+#   theme(plot.margin = margin(15, 0, 0, 0)) +
+#   coord_cartesian(clip = 'off') +
+#   annotate('text', x = '1', y = 600,
+#            label = ifelse(any(table(missing_census_info$RCWid) > 1),
+#                           'Some individuals have\nmore than one gap',
+#                           'Each individual has\nat most one gap'),
+#            hjust = 0,
+#            size = 5) +
+#   xlab('Year') + ylab('Census count')
 
 
-if (isTRUE(output_census_eval_plots)) {
-  cowplot::ggsave2(plot = census_gaps_barplot,
-         here('data_exploration', 'census_gaps_barplot.png'),
-         width = 6, height = 4)
-}
+# if (isTRUE(output_census_eval_plots)) {
+#   cowplot::ggsave2(plot = census_gaps_barplot,
+#          here('data_exploration', 'census_gaps_barplot.png'),
+#          width = 6, height = 4)
+# }
 
 
 
@@ -665,12 +700,6 @@ if (isTRUE(output_census_eval_plots)) {
 # 
 #  
 #   
-# 
-# left_join(., rcws[,c('RCWid', 'MinAge')], by = 'RCWid') %>% 
-# 
-# #   select(RCWid, first_census_year, MinAge) %>% 
-# #   #pivot_longer(cols = c('first_census_year', 'MinAge'), names_to = 'year_type', values_to = 'year') %>% 
-# 
 # # first_detected_summary %>% 
 # #   left_join(., rcws[,c('RCWid', 'MinAge')], by = 'RCWid')
 # #   rename(first_census_year = year) %>%
@@ -704,23 +733,6 @@ if (isTRUE(output_census_eval_plots)) {
 #        here('data_exploration', 'compare_minage_vs_censussize.png'),
 #        width = 6, height = 4)
 # 
-# 
-# # first_observation_compare %>% 
-# #   arrange(dif_firstcens_minage) %>% 
-# #   mutate(row_ind = 1:n(),
-# #          RCWid = factor(RCWid, levels = RCWid)) %>% 
-# #   rename(first_census_year = year) %>% 
-# #   select(RCWid, first_census_year, MinAge) %>% 
-# #   #pivot_longer(cols = c('first_census_year', 'MinAge'), names_to = 'year_type', values_to = 'year') %>% 
-# #   ggplot() +
-# #   geom_segment(aes(x = first_census_year, xend = MinAge,
-# #                    y = RCWid, yend=RCWid))
-# 
-# 
-# 
-# 
-# 
-#   
 #   
 # #characterize gaps between individuals in the census vs. individuals in the rcws data sheet
 # 
@@ -760,73 +772,6 @@ if (isTRUE(output_census_eval_plots)) {
 # ggsave(plot = compare_minage_vs_censussize_translocated,
 #        here('data_exploration', 'compare_minage_vs_censussize_translocated.png'),
 #        width = 6, height = 4)
-# 
-# 
-# 
-# 
-# rcws %>% 
-#   filter(Translocation == 'Inter-population') %>% 
-#   print(n = 70)
-# 
-# 
-# rcws %>% 
-#   filter(Origin == 'Translocated') %>% 
-#   select(RCWid, Translocation, Sex, MinAge) %>% 
-#   group_by(MinAge) %>% 
-#   summarize(count = n())
-# 
-# 
-# 
-# #can we confidently say when each translocated indiv. was introduced to the population? I.e., are their gaps between
-# #between when an individual is know to be introduced into the population (perhaps recorded in the rcws sheet) and
-# #when it is first detected in the census?
-# 
-# 
-# #difference between inter- and intra-population translocation? Frequency of each translocation type?
-# 
-# #Potential breeders?
-# 
-# #a cluster that contains a male and female breeder, regardless of 
-# #the number of helpers, is designated as a potential breeding group
-# #(PBG). Individuals may become breeders after their hatch year or 
-# #remain as helpers for many years, and breeders can hold their status
-# #within a PBG throughout their entire lifespan, which can be up to 16
-# #years of age for males and 17 years of age for females (USFWS 2003)
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# rcws_nest_query1$NatalNest
-# colnames(rcws)
-# left_join(rcws_wout_format %>% rename(id_nest = NatalNest), 
-#           nests %>% rename(id_nest = ID),
-#           by = 'id_nest')
-# 
-# 
-# 
-# 
-# test_injoin <- inner_join(nests %>% rename(id_nest = ID),
-#            rcws_wout_format %>% rename(id_nest = NatalNest), 
-#           by = 'id_nest')
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
 # 
 # rcws_nest_query1_reord <- as.data.frame(rcws_nest_query1[,c('RCWid', "MaleID", "FemaleID", "NatalNest")])
 # 
@@ -926,70 +871,19 @@ if (isTRUE(output_census_eval_plots)) {
 # 
 # any(table(missing_census_info$RCWid) > 1)
 # 
-# 
-# 
-# 
-# # summer_census_detected %>% 
-# #   mutate(year = get_year(RecordDate)) %>% 
-# #   group_by(year) %>% 
-# #   summarize(count = n()) %>% 
-# #   ggplot() +
-# #   geom_point(aes(x = year, y = count))
-# #   
-# 
-# 
-# # summer_census_detected %>% 
-# #   mutate(year = get_year(RecordDate)) %>% 
-# #   group_by(RCWid) %>% 
-# #   filter( (max(year) - min(year) + 1) != n()) %>% 
-# #   filter(RCWid == 'Z-SKY') %>% 
-# #   arrange(year)
-# 
-# 
 # lastseen_rcws <- unique(lastseendetail$RCWid)
 # rcws_id <- unique(rcws$RCWid)
 # 
 # lastseen_rcws[!lastseen_rcws %in% rcws_id]
 # 
-# rcws %>% 
-#   filter(RCWid %in% rcws_id[!rcws_id %in% summer_census_detected$RCWid]) %>% 
-#   print(n = 400)
-# 
-# rcws %>% 
-#   filter(RCWid %in% rcws_id[!rcws_id %in% lastseen_rcws]) %>% 
-#   print(n = 120)
-# 
-# 
-# 
-# 
-#   
-# 
 # unique(lastseendetail$RCWid)[!unique(lastseendetail$RCWid) %in% rcws$RCWid]
-# 
-# 
-# table(rcws$Fledged)
-# 
-# rcws_fledged <- rcws %>% 
-#   filter(Fledged != 'N')
-# 
-# 
-# unique(rcws$RCWid)[!unique(rcws$RCWid) %in% unique(lastseendetail$RCWid)]
 # 
 # unknowns <- unique(rcws_fledged$RCWid)[!unique(rcws_fledged$RCWid) %in% unique(lastseendetail$RCWid)]
 # 
 # rcws_fledged[rcws_fledged$RCWid %in% unknowns,] %>% 
 #   print(n = 20)
 # 
-# 
-# 
-# 
-# unique(rcws_ped$id)[!unique(rcws_ped$id) %in% unique(summer_census_detected$RCWid)]
-# 
-# unique(summer_census_detected$RCWid)[!unique(summer_census_detected$RCWid) %in% unique(rcws_ped$id)]
-# 
-# 
-# 
-# 
+#
 # missing_census_info <- lapply(split(summer_census_detected, summer_census_detected$RCWid), function(x) {
 #   dif_vec <- sort(x$year, decreasing = TRUE)[-length(x$year)] - sort(x$year, decreasing = TRUE)[-1]
 #   dif_vec1 <- dif_vec[dif_vec > 1] - 1
@@ -998,42 +892,12 @@ if (isTRUE(output_census_eval_plots)) {
 #   return(data.frame(gap_count = dif_vec1))
 # }) %>% 
 #   bind_rows(.id = 'RCWid')
-# 
-# 
-# missing_census_info
-# 
-# 
-# 
-# (table(missing_census_info$gap_count)/length(missing_census_info$gap_count))*100
-# 
-# 
+#
 # missing_census_info %>% 
 #   group_by(RCWid) %>% 
 #   summarize(gap_count = n(), .groups = 'drop') %>% 
 #   pull(gap_count) %>% 
 #   max()
-# 
-# 
-# 
-# missing_census_info %>% 
-#   filter(gap_count > 1)
-# 
-# summer_census_detected %>% 
-#   filter(RCWid == 'GB=Z')
-# 
-# rcws %>% 
-#   filter(RCWid == 'GB=Z')
-# 
-# rcws %>% 
-#   filter(RCWid == 'GB-Z')
-# 
-# 
-# 
-# missing_census_info
-# 
-# 
-# 
-# 
 # 
 # test_df <- data.frame(year = c(sample(c(1, 2, 3, 4, 6, 7, 8, 9, 10)), sample(c(1, 2, 3, 4, 5, 6, 7, 9, 10, 11, 15, 16)), c(3)),
 #            group = c(rep('a', 9), rep('b', 12), c('c') ))
@@ -1054,24 +918,11 @@ if (isTRUE(output_census_eval_plots)) {
 # dif_vec1 <- dif_vec[dif_vec > 1] - 1
 # 
 # 
-# 
 # #how many birds fledge (and thus should be out in the pop) but aren't ever in the census?
 # #compare first year of sighting recorded in rcws vs. the census
 # #are birds found in the year that they fledge?
 # 
 # 
-# 
-# 
-# 
-# 
-# 
-# 
-# test_df <- data.frame(year = c(200, 200, 200, 201, 201, 201, 201),
-#            type = c('a', 'b', 'a', 'b', 'b', 'b', 'a'))
-# 
-# test_df_rug <- test_df %>% 
-#   filter(type == 'a') %>% 
-#   mutate(color = c('red', 'blue', 'red'))
 # 
 # test_df %>%
 #   group_by(year, type) %>% 
@@ -1084,48 +935,6 @@ if (isTRUE(output_census_eval_plots)) {
 #            position = position_jitterdodge(dodge.width = 0,
 #                                          jitter.width = 0.1,
 #                                          jitter.height = 0))
-# 
-# 
-# 
-# 
-#   geom_jitter(data = test_df %>% filter(type == 'a'),
-#               aes(y = - 0.1),
-#               size = 1.5, alpha = 0.7,
-#               position = position_jitterdodge(dodge.width = 0,
-#                                               jitter.width = 0,
-#                                               jitter.height = 0.5))
-# 
-# raw_dat_list$nests %>% 
-#   group_by(Year) %>% 
-#   summarize(n())
-# 
-# table(raw_dat_list$nests$Year)
-# 
-# length(raw_dat_list$nests$ID)
-# length(unique(raw_dat_list$nests$ID))
-# 
-# raw_dat_list$nests$Cluster
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
-# 
 # 
 # summer_census_detected <- lastseendetail %>% 
 #   filter(Detected == 'Yes' & SurveyType == "Census")  %>% 
@@ -1147,8 +956,6 @@ if (isTRUE(output_census_eval_plots)) {
 #                                                 rcws %>% 
 #                                                   select(RCWid, Origin))
 # 
-# 
-# 
 # census_minage1 <- summer_census_detected_addint %>% 
 #   select(RCWid, year) %>% 
 #   mutate(type = 'census') %>% 
@@ -1160,13 +967,6 @@ if (isTRUE(output_census_eval_plots)) {
 #               filter(!is.na(year)) %>% 
 #               mutate(type = 'minage')
 #             )
-# 
-# 
-# 
-# 
-# 
-# 
-# 
 # 
 # #if (sum(test_subset$SurveyType == 'birth_info') > 1)
 # #  warning('There are more than one birth_info entries for ', IND)
@@ -1229,4 +1029,3 @@ if (isTRUE(output_census_eval_plots)) {
 #   ggplot(aes(y = HatchNum, x = julian)) +
 #   geom_point() +
 #   geom_smooth(method='lm', formula = y~x)
-
