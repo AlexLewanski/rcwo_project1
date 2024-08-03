@@ -6,11 +6,12 @@
 ###     anytransloc_model_selection_table: table of model fit info for translocation ancestry mods 
 ###     cjs_translocation_top_mod.csv:  parameter estimates info for top translocation mod
 ###     cjs_anytransloc_top_mod.csv: parameter estimates info for top translocation ancestry mod
-###     markrecap_anytransloc_top_mod_plot.png:
+###     markrecap_anytransloc_top_mod_plot.png: plot of apparent survival parameter estimates from
+###                     the top translocation ancestry mod.
 ### INFO: Translocation mods examine predictors of survival between translocated individuals and
-###      individuals without any translocation ancestry. Translocation ancestry mods examine 
-###      predictors of survival between individuals with any expected translocation ancestry and 
-###      individuals without translocation ancestry.
+###       individuals without any translocation ancestry. Translocation ancestry mods examine 
+###       predictors of survival between individuals with any expected translocation ancestry and 
+###       individuals without translocation ancestry.
 ##############################################################################################
 
 
@@ -22,14 +23,96 @@
 library(here)
 library(RMark)
 library(dplyr)
+library(tidyr)
 library(ggplot2)
 library(kableExtra)
 
+create_dataset <- FALSE
+
+
+############################
+### CREATING MCR DATASET ###
+############################
+
+if (isTRUE(create_dataset)) {
+  
+  #rcws <- read.csv(here('data', 'feb2024_databasemarch2023_processed', 'rcws.csv'))
+  #nests <- read.csv(here('data', 'feb2024_databasemarch2023_processed', 'nests_processed.csv'))
+  
+  file_names <- list.files(here('data', 'feb2024_databasemarch2023_processed'))
+  rcw_processed_list <- lapply(setNames(file_names[grepl('csv$', file_names)], nm = gsub(pattern = '\\.csv', '', file_names[grepl('csv$', file_names)])), function(x) {
+    read.csv(here('data', 'feb2024_databasemarch2023_processed', x))
+  })
+  
+  breeders <- unique(c(rcw_processed_list$nests$fid_dummy, rcw_processed_list$nests$mid_dummy))
+  local_breeders <- breeders[breeders %in% rcw_processed_list$rcws$RCWid[!is.na(rcw_processed_list$rcws$NatalNest)]]
+  
+  census_processed <- read.csv(here('data', 'feb2024_databasemarch2023_processed', 'census_processed.csv'))
+  pop_info_list <- lapply(setNames(nm = paste0('Scenario', 1:4)), function(X, DF) {
+    DF[DF[,X,drop = TRUE],!grepl(pattern = 'Scenario', colnames(DF))]
+  }, DF = census_processed)
+  pop_dat <- pop_info_list$Scenario3
+  
+  results_names <- setNames(nm = c("rcws_founder_info",
+                                   "rcws_inbr", 
+                                   "transloc_info_color", 
+                                   "ne_f_df", "rcw_inbr_merge", 
+                                   "rcws_ancestry_info",
+                                   "rcws_ancestry_source_by_year",
+                                   "rcw_partial_founder_summed_processed",
+                                   "rcw_contr_info_df",
+                                   "fped_prop_by_group",
+                                   "inbr_founder_color")
+  )
+  
+  results_list <- lapply(results_names, function(x) read.csv(here('results', paste0(x, '.csv'))))
+  
+  pop_dat_split <- split(pop_dat, pop_dat$RCWid)
+  
+  rcw_dat <- lapply(pop_dat_split, function(x) {
+    years_observed <- x[x$row_origin == 'observed',]
+    
+    data.frame(id = years_observed$RCWid[1],
+               ch = paste(as.integer(1994:2022 %in% years_observed$year), collapse = '')
+    )
+  }) %>% 
+    bind_rows() %>% 
+    left_join(results_list$rcws_ancestry_info %>% 
+                select(id, group, anc_prop) %>% 
+                pivot_wider(names_from = 'group', values_from = 'anc_prop',
+                            values_fill = 0) %>% 
+                mutate(transloc = 1 - `non-transloc`) %>% 
+                select(id, transloc), 
+              by = 'id') %>% 
+    rename(rcw_id = id) %>% 
+    mutate(sex = case_when(rcw_id %in% rcw_processed_list$rcws[rcw_processed_list$rcws$Sex %in% 'M', 'RCWid'] ~ 'M',
+                           rcw_id %in% rcw_processed_list$rcws[rcw_processed_list$rcws$Sex %in% 'F', 'RCWid'] ~ 'F',
+                           TRUE ~ 'U'),
+           male = if_else(rcw_id %in% rcw_processed_list$rcws[rcw_processed_list$rcws$Sex %in% 'M', 'RCWid'], 1, 0),
+           female = if_else(rcw_id %in% rcw_processed_list$rcws[rcw_processed_list$rcws$Sex %in% 'F', 'RCWid'], 1, 0),
+           sex_unknown = if_else(!rcw_id %in% rcw_processed_list$rcws[rcw_processed_list$rcws$Sex %in% c('M', 'F'), 'RCWid'], 1, 0),
+           translocated = if_else(rcw_id %in% rcw_processed_list$translocation[rcw_processed_list$translocation$Type == 'Inter-population',]$RCWid, 1, 0),
+           nontranslocated = if_else(rcw_id %in% rcw_processed_list$translocation[rcw_processed_list$translocation$Type == 'Inter-population',]$RCWid, 0, 1),
+           locally_born_breeder = if_else(rcw_id %in% local_breeders, 1, 0)) %>% 
+    left_join(results_list$rcws_inbr %>% 
+                rename(rcw_id = id) %>% 
+                select(rcw_id, f_ped), 
+              by = 'rcw_id')
+  
+  write.csv(rcw_dat,
+            file = here( 'data', 'feb2024_databasemarch2023_processed', 'rcw_mcr.csv'),
+            row.names = FALSE)
+  
+} else {
+  
+  rcw_dat <- read.csv(here('data', 'feb2024_databasemarch2023_processed', 'rcw_mcr.csv'),
+                      #colClasses=c("character", "character", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")
+                      colClasses=c("character", "character", "numeric", "character", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric")
+                      )
+  
+}
 
 ### LOADING AND INITIAL PROCESSING OF DATA ###
-rcw_dat <- read.csv(here('data', 'feb2024_databasemarch2023_processed', 'rcw_mcr.csv'),
-                    colClasses=c("character", "character", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric", "numeric"))
-
 rcw_dat1 <- rcw_dat %>%
   mutate(ch = as.character(ch),
          any_transloc = factor(if_else(transloc > 0, 1, 0)),
@@ -38,6 +121,8 @@ rcw_dat1 <- rcw_dat %>%
   select(ch, male, any_transloc, translocated) %>%
   rename(sex = male) %>%
   mutate(sex = factor(sex))
+
+
 
 
 
