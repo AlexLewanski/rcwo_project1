@@ -1,0 +1,36 @@
+\begin{table}[!h]
+\centering\begingroup\fontsize{7}{9}\selectfont
+
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\begin{tabular}[t]{cccccc}
+\toprule
+model & AICc & DeltaAICc & weight & npar & Deviance\\
+\midrule
+Phi(\textasciitilde{}sex + translocated)p(\textasciitilde{}1) & 2106.30 & 0.00 & 5.50e-01 & 4 & 802.03\\
+Phi(\textasciitilde{}sex * translocated)p(\textasciitilde{}1) & 2107.26 & 0.96 & 3.40e-01 & 5 & 800.99\\
+Phi(\textasciitilde{}sex)p(\textasciitilde{}1) & 2110.97 & 4.67 & 5.33e-02 & 3 & 808.71\\
+Phi(\textasciitilde{}translocated)p(\textasciitilde{}1) & 2111.01 & 4.71 & 5.22e-02 & 3 & 808.75\\
+Phi(\textasciitilde{}1)p(\textasciitilde{}1) & 2115.76 & 9.46 & 4.86e-03 & 2 & 815.51\\
+Phi(\textasciitilde{}sex + translocated)p(\textasciitilde{}time) & 2132.57 & 26.27 & 1.10e-06 & 31 & 773.13\\
+Phi(\textasciitilde{}sex * translocated)p(\textasciitilde{}time) & 2133.63 & 27.33 & 6.00e-07 & 32 & 772.11\\
+Phi(\textasciitilde{}sex + translocated + time)p(\textasciitilde{}1) & 2133.75 & 27.46 & 6.00e-07 & 31 & 774.32\\
+Phi(\textasciitilde{}sex + time)p(\textasciitilde{}1) & 2136.86 & 30.56 & 1.00e-07 & 30 & 779.50\\
+Phi(\textasciitilde{}sex)p(\textasciitilde{}time) & 2137.06 & 30.76 & 1.00e-07 & 30 & 779.70\\
+Phi(\textasciitilde{}translocated)p(\textasciitilde{}time) & 2137.28 & 30.99 & 1.00e-07 & 30 & 779.92\\
+Phi(\textasciitilde{}time + translocated)p(\textasciitilde{}1) & 2139.03 & 32.73 & 0.00e+00 & 30 & 781.66\\
+Phi(\textasciitilde{}1)p(\textasciitilde{}time) & 2141.85 & 35.55 & 0.00e+00 & 29 & 786.56\\
+Phi(\textasciitilde{}time)p(\textasciitilde{}1) & 2142.50 & 36.20 & 0.00e+00 & 29 & 787.21\\
+Phi(\textasciitilde{}sex * time)p(\textasciitilde{}1) & 2153.12 & 46.82 & 0.00e+00 & 57 & 738.83\\
+Phi(\textasciitilde{}sex + translocated + time)p(\textasciitilde{}time) & 2161.13 & 54.83 & 0.00e+00 & 58 & 744.68\\
+Phi(\textasciitilde{}sex + time)p(\textasciitilde{}time) & 2163.84 & 57.54 & 0.00e+00 & 57 & 749.55\\
+Phi(\textasciitilde{}time)p(\textasciitilde{}time) & 2169.45 & 63.15 & 0.00e+00 & 56 & 757.30\\
+Phi(\textasciitilde{}time * translocated)p(\textasciitilde{}1) & 2170.44 & 64.14 & 0.00e+00 & 57 & 756.14\\
+Phi(\textasciitilde{}sex * time)p(\textasciitilde{}time) & 2181.75 & 75.45 & 0.00e+00 & 84 & 708.60\\
+Phi(\textasciitilde{}time + translocated)p(\textasciitilde{}time) & 2183.65 & 77.35 & 0.00e+00 & 57 & 769.36\\
+Phi(\textasciitilde{}time * translocated)p(\textasciitilde{}time) & 2217.49 & 111.19 & 0.00e+00 & 84 & 744.34\\
+Phi(\textasciitilde{}sex * translocated * time)p(\textasciitilde{}1) & 2229.29 & 122.99 & 0.00e+00 & 113 & 690.69\\
+Phi(\textasciitilde{}sex * translocated * time)p(\textasciitilde{}time) & 2262.07 & 155.77 & 0.00e+00 & 140 & 660.33\\
+\bottomrule
+\end{tabular}}
+\endgroup{}
+\end{table}

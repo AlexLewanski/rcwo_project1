@@ -1,0 +1,48 @@
+Translocation info:
+release_year Source cohort_size
+1998 ANF 1
+2001 ANF 4
+2002 FTB 4
+2003 ANF 4
+2005 ANF 6
+2007 ANF 6
+2008 CBJTC 1
+2009 FTS 10
+2014 FTS 6
+2015 ONF 6
+2016 WSF-CITRUS 6
+
+
+### Fisher's Exact Tests comparing establishment proportions ###
+Sex
+Estimate = 1.749
+P = 0.384
+
+Source
+Estimate = 1.749
+P = 0.384
+
+release_year
+Estimate = 1.749
+P = 0.384
+
+Establishment percentage range by source population: 50-100%
+Establishment percentage range by release year: 50-100%
+
+Number of transloc. birds that nested: 
+34
+Percentage of transloc. birds that nested: 
+89.47%
+
+Median and range of breeding years for translocated birds that nested:
+range: 
+1--15
+median: 
+5
+Number of offspring from translocated birds in a census: 
+142
+
+Breakdown of breeding pairs that involve at least one translocated bird:
+pairing_type pairing_count fldg_count_pairing
+transloc_local 61 170
+transloc_transloc 4 13

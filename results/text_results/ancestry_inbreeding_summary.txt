@@ -1,0 +1,33 @@
+##########################
+### ANCESTRY SUMMARIES ###
+##########################
+2022 indivs with translocation ancestry: 161
+total 2022 indiv count: 167
+
+2022 individual-level translocation ancestry:
+mean = 49.8
+sd = 26.8
+
+population-level translocation ancestry = 0.4982
+
+group year group_anc ancestry_prop prop_transloc
+ANF 2022 50.87 0.3 61.22
+CBJTC 2022 3.47 0.02 4.08
+FTB 2022 0.56 0 0
+FTS 2022 16.31 0.1 20.41
+ONF 2022 9.75 0.06 12.24
+WSF-CITRUS 2022 2.25 0.01 2.04
+
+
+############################
+### INBREEDING SUMMARIES ###
+############################
+first inbreeding year = 2000
+
+AVERAGE INCREASE IN MEAN Fped STARTING AT FIRST INBREEDING YEAR:
+mean_average_fped_change sd_average_fped_change
+0.000953 0.001972
+
+MAX Fped INFO:
+year mean_fped
+2018 0.0238

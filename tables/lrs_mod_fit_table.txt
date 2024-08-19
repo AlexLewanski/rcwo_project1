@@ -1,0 +1,75 @@
+\begin{table}[!h]
+\centering\begingroup\fontsize{7}{9}\selectfont
+
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\begin{tabular}[t]{cccc}
+\toprule
+Rank & Fixed effects & ELPD diff & SE ELPD diff\\
+\midrule
+1 & Mean group size + First breeding year + Sex + Transloc. ancestry + Ancestry count & 0.000 & 0.000\\
+2 & Mean group size + First breeding year + Sex + Transloc. ancestry & -2.303 & 2.918\\
+3 & Mean group size + First breeding year + Sex + Transloc. ancestry + Fped & -3.084 & 2.454\\
+4 & Mean group size + First breeding year + Transloc. ancestry + Ancestry count & -3.454 & 2.254\\
+5 & Mean group size + First breeding year + Sex + Transloc. ancestry + Ancestry count + Fped & -4.417 & 1.707\\
+6 & First breeding year + Transloc. ancestry + Ancestry count & -4.661 & 7.566\\
+7 & First breeding year + Sex + Transloc. ancestry + Fped & -5.075 & 7.699\\
+8 & First breeding year + Sex + Transloc. ancestry + Ancestry count & -5.671 & 7.502\\
+9 & Mean group size + First breeding year + Transloc. ancestry + Ancestry count + Fped & -6.229 & 2.683\\
+10 & First breeding year + Sex + Transloc. ancestry & -6.586 & 7.692\\
+11 & First breeding year + Transloc. ancestry + Ancestry count + Fped & -6.677 & 7.602\\
+12 & First breeding year + Sex + Transloc. ancestry + Ancestry count + Fped & -7.087 & 7.612\\
+13 & Mean group size + First breeding year + Transloc. ancestry & -7.595 & 3.359\\
+14 & Mean group size + First breeding year + Sex + Ancestry count + Fped & -8.252 & 3.350\\
+15 & Mean group size + First breeding year + Transloc. ancestry + Fped & -9.141 & 3.226\\
+16 & First breeding year + Transloc. ancestry & -9.780 & 7.975\\
+17 & First breeding year + Sex + Ancestry count + Fped & -10.624 & 7.571\\
+18 & Mean group size + First breeding year + Sex + Ancestry count & -10.628 & 3.789\\
+19 & Mean group size + First breeding year + Ancestry count + Fped & -11.164 & 3.336\\
+20 & First breeding year + Transloc. ancestry + Fped & -13.110 & 7.719\\
+21 & Mean group size + First breeding year + Ancestry count & -13.377 & 3.510\\
+22 & First breeding year + Ancestry count + Fped & -14.415 & 7.902\\
+23 & Mean group size + First breeding year + Sex + Fped & -14.713 & 4.648\\
+24 & First breeding year + Sex + Ancestry count & -14.909 & 7.969\\
+25 & Mean group size + First breeding year + Sex & -16.312 & 4.522\\
+26 & First breeding year + Sex & -16.819 & 8.138\\
+27 & First breeding year + Ancestry count & -16.942 & 8.079\\
+28 & Mean group size + Sex + Ancestry count + Fped & -17.791 & 4.107\\
+29 & Mean group size + First breeding year + Fped & -18.141 & 5.057\\
+30 & First breeding year + Fped & -18.314 & 8.538\\
+31 & Mean group size + First breeding year & -18.316 & 5.074\\
+32 & Mean group size + Sex + Transloc. ancestry + Ancestry count + Fped & -19.109 & 4.344\\
+33 & Mean group size + Sex + Transloc. ancestry + Ancestry count & -19.129 & 4.084\\
+34 & Mean group size + Transloc. ancestry + Ancestry count & -19.163 & 4.300\\
+35 & Mean group size + Sex + Ancestry count & -19.266 & 4.096\\
+36 & First breeding year & -19.912 & 8.338\\
+37 & First breeding year + Sex + Fped & -19.952 & 8.552\\
+38 & Mean group size + Ancestry count & -21.358 & 4.403\\
+39 & Mean group size + Transloc. ancestry + Ancestry count + Fped & -22.265 & 4.437\\
+40 & Mean group size + Ancestry count + Fped & -23.206 & 4.788\\
+41 & Sex + Ancestry count + Fped & -24.575 & 8.983\\
+42 & Ancestry count & -24.691 & 9.027\\
+43 & Sex + Ancestry count & -25.089 & 9.367\\
+44 & Ancestry count + Fped & -26.679 & 9.405\\
+45 & Sex + Transloc. ancestry + Ancestry count + Fped & -26.774 & 9.019\\
+46 & Transloc. ancestry + Ancestry count + Fped & -27.056 & 9.227\\
+47 & Transloc. ancestry + Ancestry count & -27.115 & 9.420\\
+48 & Sex + Transloc. ancestry + Ancestry count & -27.794 & 9.748\\
+49 & Mean group size + Sex + Transloc. ancestry & -37.838 & 7.023\\
+50 & Mean group size + Sex + Transloc. ancestry + Fped & -38.543 & 7.521\\
+51 & Mean group size + Sex + Fped & -40.135 & 7.537\\
+52 & Mean group size + Sex & -40.277 & 7.567\\
+53 & Mean group size + Transloc. ancestry & -40.345 & 7.293\\
+54 & Mean group size + Fped & -42.032 & 7.573\\
+55 & Mean group size + Transloc. ancestry + Fped & -43.049 & 7.479\\
+56 & Mean group size & -43.239 & 8.106\\
+57 & Sex + Fped & -46.535 & 11.260\\
+58 & Sex + Transloc. ancestry + Fped & -47.250 & 10.673\\
+59 & Fped & -47.842 & 11.639\\
+60 & Transloc. ancestry + Fped & -47.881 & 11.596\\
+61 & Sex + Transloc. ancestry & -48.630 & 11.542\\
+62 & Sex & -48.989 & 11.614\\
+63 & Transloc. ancestry & -50.253 & 11.832\\
+\bottomrule
+\end{tabular}}
+\endgroup{}
+\end{table}

@@ -1,0 +1,17 @@
+\begin{table}[!h]
+\centering\begingroup\fontsize{7}{9}\selectfont
+
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\begin{tabular}[t]{cccccc}
+\toprule
+Parameter & Group & Estimate & Standard error & lower 95\% CI & upper 95\% CI\\
+\midrule
+Phi & female 0\% transloc. ancestry & 0.71 & 0.016 & 0.67 & 0.74\\
+Phi & male 0\% transloc. ancestry & 0.77 & 0.013 & 0.74 & 0.79\\
+Phi & female >0\% transloc. ancestry & 0.77 & 0.015 & 0.73 & 0.79\\
+Phi & male >0\% transloc. ancestry & 0.82 & 0.012 & 0.79 & 0.84\\
+p & all & 0.97 & 0.004 & 0.96 & 0.98\\
+\bottomrule
+\end{tabular}}
+\endgroup{}
+\end{table}

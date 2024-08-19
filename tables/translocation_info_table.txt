@@ -1,0 +1,31 @@
+\begin{table}[!h]
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\begin{tabular}[t]{cccccccc}
+\toprule
+Donor population & Donor abbr. & State & Translocation year & Translocation month & Male & Female & Total count\\
+\midrule
+ &  & FL & 1998 & Dec & 0 & 1 & 1\\
+
+ &  & FL & 2001 & Dec & 2 & 2 & 4\\
+
+ &  & FL & 2003 & Nov & 3 & 1 & 4\\
+
+ &  & FL & 2005 & Nov & 3 & 3 & 6\\
+
+\multirow{-5}{*}{\centering\arraybackslash Apalachicola National Forest} & \multirow{-5}{*}{\centering\arraybackslash ANF} & FL & 2007 & Nov & 3 & 3 & 6\\
+\cmidrule{1-8}
+Camp Blanding Joint Training Center & CBJTC & FL & 2008 & Nov & 1 & 0 & 1\\
+\cmidrule{1-8}
+Fort Benning & FTB & GA & 2002 & Oct & 3 & 1 & 4\\
+\cmidrule{1-8}
+ &  & GA & 2009 & Oct & 5 & 5 & 10\\
+
+\multirow{-2}{*}{\centering\arraybackslash Fort Stewart} & \multirow{-2}{*}{\centering\arraybackslash FTS} & GA & 2014 & Nov & 3 & 3 & 6\\
+\cmidrule{1-8}
+Osceola National Forest & ONF & FL & 2015 & Oct & 3 & 3 & 6\\
+\cmidrule{1-8}
+Withlacoochee State Forest---Citrus & WSF-CITRUS & FL & 2016 & Oct & 3 & 3 & 6\\
+\bottomrule
+\end{tabular}}
+\end{table}

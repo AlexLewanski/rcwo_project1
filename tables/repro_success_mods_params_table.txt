@@ -1,0 +1,99 @@
+\begin{table}[!h]
+\centering
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\begin{tabular}[t]{cccccccc}
+\toprule
+Response & Parameter & Estimate & lower 95\% CI & upper 95\% CI & Rhat & Bulk ESS & Tail ESS\\
+\midrule
+ & Intercept & -0.629 & -1.348 & 0.091 & 1.001 & 10489.955 & 12589.896\\
+
+ & Mean group size & 0.890 & 0.653 & 1.127 & 1.001 & 10620.426 & 13498.283\\
+
+ & First breeding year & -0.067 & -0.100 & -0.035 & 1.001 & 7579.727 & 11916.549\\
+
+ & Sex (female) & -0.233 & -0.497 & 0.029 & 1.000 & 9877.912 & 13493.167\\
+
+ & Transloc. ancestry & 1.051 & 0.475 & 1.631 & 1.001 & 7056.498 & 11037.891\\
+
+ & Ancestry count & -0.263 & -0.544 & 0.024 & 1.000 & 9132.800 & 12923.138\\
+
+ & Fped & 1.230 & -5.059 & 7.449 & 1.000 & 15216.449 & 14492.251\\
+
+\multirow{-8}{*}[3.5\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\centering\arraybackslash life\_fldg} & sd(Intercept) [rand. effect] & 0.987 & 0.822 & 1.167 & 1.000 & 5709.517 & 11053.487\\
+\cmidrule{1-8}
+ & Intercept & 0.630 & 0.151 & 1.103 & 1.000 & 21339.917 & 16846.616\\
+
+ & Mean group size & 0.432 & 0.269 & 0.596 & 1.000 & 20177.926 & 16695.815\\
+
+ & First breeding year & -0.043 & -0.064 & -0.023 & 1.000 & 13213.893 & 13880.964\\
+
+ & Sex (female) & -0.136 & -0.305 & 0.034 & 1.000 & 19435.009 & 16595.481\\
+
+ & Transloc. ancestry & 0.541 & 0.200 & 0.884 & 1.000 & 12753.593 & 14015.148\\
+
+ & Ancestry count & -0.119 & -0.314 & 0.073 & 1.000 & 17002.433 & 15695.343\\
+
+ & Fped & 3.039 & -1.798 & 7.880 & 1.000 & 24293.484 & 17303.362\\
+
+\multirow{-8}{*}[3.5\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\centering\arraybackslash nesting\_years} & sd(Intercept) [rand. effect] & 0.485 & 0.379 & 0.599 & 1.001 & 7852.114 & 13396.908\\
+\cmidrule{1-8}
+ & Intercept & 0.848 & 0.362 & 1.341 & 1.000 & 24766.566 & 15749.666\\
+
+ & Mean group size & 0.025 & -0.157 & 0.203 & 1.000 & 22562.342 & 15316.056\\
+
+ & First breeding year & 0.006 & -0.011 & 0.024 & 1.000 & 14721.638 & 15174.121\\
+
+ & Sex (female) & -0.588 & -0.769 & -0.412 & 1.000 & 22153.689 & 15660.824\\
+
+ & Transloc. ancestry & -0.411 & -0.728 & -0.105 & 1.000 & 18007.325 & 14537.377\\
+
+ & Ancestry count & 0.078 & -0.099 & 0.254 & 1.000 & 16290.333 & 15623.577\\
+
+ & Fped & -5.145 & -10.775 & 0.223 & 1.000 & 21403.936 & 15501.542\\
+
+\multirow{-8}{*}[3.5\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\centering\arraybackslash birth\_firstbreed\_dif} & sd(Intercept) [rand. effect] & 0.058 & 0.002 & 0.162 & 1.000 & 8691.476 & 7292.300\\
+\cmidrule{1-8}
+ & Intercept & 1.143 & 0.754 & 1.521 & 1.000 & 24279.429 & 16734.222\\
+
+ & Mean group size & 0.355 & 0.219 & 0.492 & 1.000 & 24434.432 & 16775.415\\
+
+ & First breeding year & -0.026 & -0.043 & -0.010 & 1.000 & 15689.940 & 15571.196\\
+
+ & Sex (female) & -0.365 & -0.509 & -0.222 & 1.000 & 21388.354 & 15850.209\\
+
+ & Transloc. ancestry & 0.188 & -0.086 & 0.472 & 1.000 & 16075.396 & 16249.112\\
+
+ & Ancestry count & -0.067 & -0.226 & 0.092 & 1.000 & 20516.315 & 16375.067\\
+
+ & Fped & 1.254 & -2.976 & 5.439 & 1.000 & 26971.635 & 16296.789\\
+
+\multirow{-8}{*}[3.5\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\centering\arraybackslash birth\_lastbreed\_dif} & sd(Intercept) [rand. effect] & 0.369 & 0.273 & 0.470 & 1.000 & 7196.582 & 12123.447\\
+\cmidrule{1-8}
+ & Intercept & -0.956 & -1.283 & -0.633 & 1.000 & 28682.767 & 15489.804\\
+
+ & Intercept (hurdle) & -0.977 & -7.938 & 3.875 & 1.000 & 7526.688 & 6789.824\\
+
+ & Mean group size & 0.359 & 0.238 & 0.480 & 1.000 & 26708.884 & 14842.333\\
+
+ & First breeding year & 0.010 & -0.002 & 0.022 & 1.000 & 17954.821 & 15620.388\\
+
+ & Sex (female) & -0.004 & -0.120 & 0.112 & 1.000 & 28436.513 & 15231.086\\
+
+ & Transloc. ancestry & 0.028 & -0.161 & 0.220 & 1.000 & 19690.048 & 15486.428\\
+
+ & Ancestry count & -0.007 & -0.131 & 0.116 & 1.001 & 17738.489 & 15363.292\\
+
+ & Fped & -1.586 & -5.046 & 2.050 & 1.000 & 21847.576 & 15537.695\\
+
+ & First breeding year (hurdle) & 0.138 & -0.033 & 0.474 & 1.001 & 1964.545 & 4555.591\\
+
+ & Transloc. ancestry (hurdle) & -2.549 & -7.712 & 0.535 & 1.001 & 2756.277 & 5186.928\\
+
+ & Mean group size (hurdle) & -1.583 & -4.629 & 0.099 & 1.001 & 3259.165 & 4521.551\\
+
+ & sd(Intercept) [rand. effect] & 0.068 & 0.003 & 0.181 & 1.000 & 4611.185 & 6965.546\\
+
+\multirow{-13}{*}[6\dimexpr\aboverulesep+\belowrulesep+\cmidrulewidth]{\centering\arraybackslash mean\_fldg\_per\_year} & sd(hurdle Intercept) [rand. effect] & 4.476 & 0.618 & 12.271 & 1.004 & 979.566 & 2005.770\\
+\bottomrule
+\end{tabular}}
+\end{table}

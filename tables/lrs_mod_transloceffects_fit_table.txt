@@ -1,0 +1,27 @@
+\begin{table}[!h]
+\centering\begingroup\fontsize{7}{9}\selectfont
+
+\resizebox{\ifdim\width>\linewidth\linewidth\else\width\fi}{!}{
+\begin{tabular}[t]{cccc}
+\toprule
+Rank & Fixed effects & ELPD diff & SE ELPD diff\\
+\midrule
+1 & Mean group size + First breeding year + Sex + transloc & 0.000 & 0.000\\
+2 & Mean group size + First breeding year + transloc & -2.126 & 1.868\\
+3 & First breeding year + Sex + transloc & -4.844 & 6.315\\
+4 & First breeding year + transloc & -5.803 & 6.305\\
+5 & Mean group size + First breeding year + Sex & -6.311 & 2.377\\
+6 & Mean group size + Sex & -8.365 & 2.963\\
+7 & Mean group size + First breeding year & -8.993 & 2.879\\
+8 & Mean group size + Sex + transloc & -9.624 & 2.921\\
+9 & Mean group size & -11.502 & 3.452\\
+10 & First breeding year & -11.511 & 6.836\\
+11 & First breeding year + Sex & -11.551 & 6.349\\
+12 & Mean group size + transloc & -11.735 & 3.262\\
+13 & Sex + transloc & -16.138 & 8.160\\
+14 & Sex & -16.278 & 7.625\\
+15 & transloc & -17.654 & 8.151\\
+\bottomrule
+\end{tabular}}
+\endgroup{}
+\end{table}
