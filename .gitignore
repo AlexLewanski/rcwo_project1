@@ -1,5 +1,5 @@
 .DS_Store
-misc_content/
+additional_content/
 data_exploration/
 ~$Bowman et al RCW Translocations AOS 2019 Revised.pptx
 resources/
@@ -7,3 +7,9 @@ scripts/devel_scripts/
 data/
 /figures/test_figs/
 .Rhistory
+*.out
+*.vcv
+*.inp
+*.res
+Thumbs.db
+results_old
