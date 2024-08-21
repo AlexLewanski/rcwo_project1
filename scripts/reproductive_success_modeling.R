@@ -302,9 +302,9 @@ top_predictors_lifemod_modstrig <- paste(top_predictors_lifemod_vec, collapse = 
 
 
 
-####################################################
-### TOP TRANSLOCATION ANCESTRUS + AUXILIARY MODS ###
-####################################################
+#######################################################
+### TOP TRANSLOCATION ANCESTRY MOD + AUXILIARY MODS ###
+#######################################################
 
 beta_prior_poisson <- c(prior_string("normal(0,5)", class = "b", coef = "anc_count"),
             prior_string("normal(0,5)", class = "b", coef = "first_year_scaled"),
@@ -647,7 +647,7 @@ for (i in names(repro_multipan_list)) {
   if (i == "transloc_anc") {
     output_path <- here('figures', 'main_paper', paste0(i, '_repro_mod_multipan.png') )
   } else {
-    output_path <- here('figures', 'supplement', 'figures', paste0(i, '_repro_mod_multipan.png') )
+    output_path <- here('figures', 'supplement', paste0(i, '_repro_mod_multipan.png') )
   }
   
   cowplot::ggsave2(filename = output_path,
@@ -762,7 +762,7 @@ repro_success_pp_check_multipan <- cowplot::plot_grid(repro_success_pp_check_lis
                                                       repro_success_pp_check_list$`First nesting age`,
                                                       repro_success_pp_check_list$`Last nesting age`, nrow = 1)
 
-cowplot::ggsave2(filename = here('figures', 'supplement', 'figures', 'repro_success_pp_check_multipan.png' ),
+cowplot::ggsave2(filename = here('figures', 'supplement', 'repro_success_pp_check_multipan.png' ),
                  plot = repro_success_pp_check_multipan,
                  width = 9*1.25, height = 2*1.25, bg = 'white')
 
@@ -930,7 +930,7 @@ pp_plot_transloc_mod <- pp_check(mod_fit_life_fldg_transloc[[15]], ndraws = 1000
 pp_plot_transloc_mod$layers[[1]]$aes_params$colour <- "#ad5aad"
 
 
-cowplot::ggsave2(filename = here('figures', 'supplement', 'figures', 'transloc_mod_pp_check.png' ),
+cowplot::ggsave2(filename = here('figures', 'supplement', 'transloc_mod_pp_check.png' ),
                  plot = pp_plot_transloc_mod,
                  width = 5*1.25, height = 4*1.25, bg = 'white')
 
