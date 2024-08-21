@@ -100,7 +100,7 @@ color_generator <- colorRampPalette(c("#eac7b7","#814d36"))
 
 
 ### CREATING MAP ###
-png(here('figures', 'supplement', 'figures', 'rcw_range_pop_map.png'), 
+png(here('figures', 'supplement', 'rcw_range_pop_map.png'), 
     width = 8, height = 6.4, units = "in", res = 1000)
 par(mar = c(0.5, 0.5, 0.5, 2)) #bottom, left, top, right
 plot(us_mexico_map, xlim  = c(-1.2e06, 1e06), ylim = c(-8.5e05, 8e05),

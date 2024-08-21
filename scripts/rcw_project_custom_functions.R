@@ -106,6 +106,29 @@ ped_add_dummy_parents <- function(ped, id, fid, mid, sex, nest_id, founder_paren
 
 
 
+###############################
+### MISCELLANEOUS FUNCTIONS ###
+###############################
+all_subset_combn <- function(vec, upper_range = length(vec)) {
+  unlist(lapply(1:upper_range, function(x, vec) {combn(vec, m = x, simplify = FALSE)
+  }, vec = vec), 
+  recursive = FALSE)
+}
+
+
+simpson <- function(prop_vec, version = c('regular', 'complement')) {
+  total_val <- sum(prop_vec)
+  square_term <- (prop_vec/total_val)^2
+  
+  return(
+    switch(version,
+           regular = {sum(square_term)},
+           complement = {1 - sum(square_term)}
+    )
+  )
+}
+
+
 #####################
 ### VISUALIZATION ###
 #####################

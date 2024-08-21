@@ -20,14 +20,14 @@ here::here()
 ### LOADING CUSTOM FUNCTIONS AND DATA ###
 
 #custom functions
-devtools::load_all('/Users/alexlewanski/Documents/r_packages/pedutils')
-source(here('scripts', 'data_processing_custom_functions.R'))
+#devtools::load_all('/Users/alexlewanski/Documents/r_packages/pedutils')\
+source(here('scripts', 'ped_functions.R'))
+source(here('scripts', 'rcw_project_custom_functions.R'))
 
 file_names <- list.files(here('data', 'feb2024_databasemarch2023_processed'))
 rcw_processed_list <- lapply(setNames(file_names, nm = gsub(pattern = '\\.csv', '', file_names)), function(x) {
   read.csv(here('data', 'feb2024_databasemarch2023_processed', x))
 })
-
 
 
 ### ANALYSIS OPTIONS ###
@@ -202,9 +202,9 @@ rcw_partial_founder_summed <- left_join(rcw_partial_founder_fped %>%
             by = 'founder_id') %>%
   select(id, group, partial_founder_fped, fped_prop, founder_id) %>%
   left_join(pop_info_list[['Scenario3']] %>% rename(id = RCWid), ., by = 'id', relationship = "many-to-many") %>% 
-  group_by(year) %>%
+  #group_by(year) %>%
   #mutate(pop_size = n()) %>% 
-  ungroup() %>% 
+  #ungroup() %>% 
   filter(!is.na(partial_founder_fped)) %>% 
   left_join(., pop_info_list[['Scenario3']] %>% 
               group_by(year) %>% 
@@ -317,6 +317,410 @@ if (isTRUE(output_results)) {
   }
   
 }
+
+
+
+
+
+nest_summary <- rcw_processed_list$nests_processed %>% 
+  select(Year, MaleID, FemaleID) %>% 
+  pivot_longer(cols = c(MaleID, FemaleID), 
+               names_to = 'parent_type', 
+               values_to = 'ID') %>% 
+  group_by(ID) %>% 
+  summarize(parent_type = first(parent_type),
+         first_nest = min(Year),
+         last_nest = max(Year),
+         first_nest_dif = 2022 - min(Year),
+         total_nests = n())
+
+
+
+
+
+nest_summary %>% 
+  left_join(.,
+            rcw_partial_founder_summed %>% 
+              group_by(founder_id) %>% 
+              summarize(first_fped_contr = min(year),
+                        .groups = 'drop') %>% 
+              rename(ID = founder_id),
+            by = 'ID') %>% 
+  mutate(year_dif = first_fped_contr - first_nest) %>% 
+  left_join(., 
+            rcws_founder_info %>% rename(ID = id), 
+            by = 'ID') %>% 
+  ggplot() +
+  #geom_histogram(aes(x = first_nest_dif),
+  #               bins = 15, alpha = 0.8, fill = 'gray') +
+  geom_dotplot(data = . %>% 
+                 filter(!is.na(year_dif)),
+               aes(x = year_dif, 
+                   fill = group),
+               dotsize = 0.5, binwidth = 0.5, 
+               method = "histodot",
+               binpositions = "all") +
+  theme_classic()
+  
+
+
+
+nest_summary %>% 
+  left_join(.,
+            rcw_partial_founder_summed %>% 
+              group_by(founder_id) %>% 
+              summarize(first_fped_contr = min(year),
+                        .groups = 'drop') %>% 
+              rename(ID = founder_id),
+            by = 'ID') %>% 
+  mutate(year_dif = first_fped_contr - first_nest) %>% 
+  left_join(., 
+            rcws_founder_info %>% rename(ID = id), 
+            by = 'ID') %>% 
+  #filter(!is.na(year_dif)) %>% 
+  ggplot() +
+  geom_histogram(data = . %>% 
+                   filter(!is.na(group)),
+                 aes(x = first_nest_dif, fill = group),
+                 bins = 15, alpha = 0.8) +
+  #geom_point(aes(x = year_dif, y = stack_val, color = group), size = 5)
+  geom_dotplot(data = . %>% 
+                 filter(!is.na(year_dif)),
+               aes(x = year_dif, 
+                   fill = group),
+               stackgroups = TRUE,
+               dotsize = 1, binwidth = 0.5, 
+               method = "histodot",
+               binpositions = "all") +
+  theme_classic()
+
+
+
+
+
+
+
+
+
+nesting_founder_df <- nest_summary %>% 
+  left_join(.,
+            rcw_partial_founder_summed %>% 
+              group_by(founder_id) %>% 
+              summarize(first_fped_contr = min(year),
+                        .groups = 'drop') %>% 
+              rename(ID = founder_id),
+            by = 'ID') %>% 
+  mutate(year_dif = first_fped_contr - first_nest) %>% 
+  left_join(., 
+            rcws_founder_info %>% rename(ID = id), 
+            by = 'ID') %>% 
+  filter(ID %in% rcws_founder_info$id)
+  
+
+
+
+
+inbr_timing_founders_cleveland_dotplot <- nesting_founder_df %>% 
+  arrange(first_nest) %>% 
+  mutate(ID_factor = factor(ID, levels = ID ),
+         fped_contr = if_else(is.na(first_fped_contr), 'no', 'yes')) %>% 
+  #select(ID_factor, first_nest, first_fped_contr, group) %>% 
+  #pivot_longer(cols = c(first_nest, first_fped_contr),
+  #             names_to = 'year_type',
+  #             values_to = 'year') %>% 
+  #filter(!is.na(year)) %>% 
+  ggplot() +
+  geom_point(aes(x = first_nest, y = ID_factor), 
+             color = 'transparent') +
+  geom_segment(data = . %>% 
+                 filter(!is.na(first_fped_contr)),
+               aes(x = first_nest, xend = first_fped_contr,
+                   y = ID_factor, yend = ID_factor, color = group),
+               size = 1.1) +
+  geom_point(aes(x = first_nest, y = ID_factor, 
+                 alpha = fped_contr, size = fped_contr, color = group)) +
+  geom_point(data = . %>% 
+               filter(!is.na(first_fped_contr)),
+             aes(x = first_fped_contr, y = ID_factor, 
+                 alpha = fped_contr, size = fped_contr, color = group)) +
+  ylab('Individuals') +
+  xlab('Year') +
+  scale_alpha_manual(values = c(0.5, 1)) +
+  scale_size_manual(values = c(1.5, 2.3)) +
+  theme_bw() +
+  theme(panel.grid.major.y = element_blank(),
+        panel.grid.minor = element_blank(),
+        panel.grid.major.x = element_line(linetype = 'dashed', 
+                                          color = '#d8d8d8'),
+        panel.border = element_blank(),
+        axis.line.x = element_line(color = '#4c4c4c', linewidth = 1.5),
+        axis.ticks.x = element_line(color = '#808080', linewidth = 0.7),
+        axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        axis.title.y = element_text(margin = margin(0, 5.5, 0, 0)),
+        legend.position = 'none') +
+  scale_color_manual(values = group_color_vec)
+  
+
+prop_circle_plot <- rcw_step3 %>% 
+  ggplot() +
+  geom_polygon(aes(x, y, group = group, fill = group),
+               colour = NA,
+               alpha = 0.5) +
+  geom_polygon(data = rcw_step3_small,
+               aes(x, y, group = group, fill = group),
+               colour = NA,
+               alpha = 1) +
+  geom_text(data = data.frame(group = names(rcw_step2),
+                              y = rcw_step2) %>% 
+              left_join(., founder_inbr_contr_info, by = 'group') %>% 
+              filter(inbr_count > 0),
+            aes(x = 0, y = y, label = inbr_count, color = group),
+            fontface = 'bold', size = 3.75) +
+  theme_void() +
+  theme(legend.position = 'none') +
+  scale_fill_manual(values = group_color_vec) +
+  scale_color_manual(values = setNames(c("#90354b", "#c1ad40", "#3e3e3e", "#039973", "#0d6e8e", "#660066", "#aaaaaa"), 
+                                       nm = names(group_color_vec)))
+
+
+
+
+inbr_delay_plot <- plot_grid(inbr_timing_founders_cleveland_dotplot,
+          prop_circle_plot + theme(plot.margin = margin(0, 0, 0.9, 0, unit = 'cm')),
+          ncol = 2,
+          rel_widths = c(0.8, 0.2))
+
+cowplot::ggsave2(filename = here('figures', 'supplement', 'figures', 'inbr_delay_plot.png'),
+                 plot = inbr_delay_plot,
+                 width = 10*0.8, height = 8*0.8, bg = 'white')
+
+
+
+
+
+
+
+
+
+
+
+
+nest_summary %>% 
+  left_join(.,
+            rcw_partial_founder_summed %>% 
+              group_by(founder_id) %>% 
+              summarize(first_fped_contr = min(year),
+                        .groups = 'drop') %>% 
+              rename(ID = founder_id),
+            by = 'ID') %>% 
+  mutate(year_dif = first_fped_contr - first_nest) %>% 
+  left_join(., 
+            rcws_founder_info %>% rename(ID = id), 
+            by = 'ID') %>% 
+  ggplot() +
+  geom_point()
+
+
+
+rcw_processed_list$rcws %>% 
+  filter(RCWid == '-CZG')
+
+
+
+nest_summary %>% 
+  left_join(.,
+            rcw_partial_founder_summed %>% 
+              group_by(founder_id) %>% 
+              summarize(first_fped_contr = min(year),
+                        .groups = 'drop') %>% 
+              rename(ID = founder_id),
+            by = 'ID') %>% 
+  mutate(year_dif = first_fped_contr - first_nest) %>% 
+  left_join(., 
+            rcws_founder_info %>% rename(ID = id), 
+            by = 'ID') %>% 
+  mutate(contr = if_else(is.na()))
+
+
+rcws_founder_info %>% 
+  mutate(fped_contr = if_else(id %in% rcw_partial_founder_summed$founder_id,
+                              'yes', 'no')) %>% 
+  group_by(group) %>% 
+  summarize(contr_count = n())
+
+ggplot(dat, aes(x = x, y = y, fill = group)) + 
+  geom_bar(stat = "identity", position = "identity")
+
+
+founder_inbr_contr_info <- rcw_partial_founder_summed %>% 
+  group_by(founder_id) %>% 
+  slice_head(n = 1) %>%
+  ungroup() %>% 
+  group_by(group) %>% 
+  summarize(inbr_count = n(), .groups = 'drop') %>% 
+  right_join(., rcws_founder_info %>% 
+               group_by(group) %>% 
+               summarize(total_count = n(),
+                         .groups ='drop'),
+             by = 'group') %>% 
+  mutate(inbr_count = if_else(is.na(inbr_count), 0, inbr_count))
+
+
+count_vec <- setNames(1:6, nm = letters[1:6])
+
+
+test_df <- data.frame(group = letters[1:6],
+                      size = c(2, 9, 5, 1, 11, 4),
+                      reduced_size = c(0, 4, 1, 0, 2, 0))
+
+
+
+
+
+
+
+eval_step1 <- circle_radius_area_prop(max_r = 10, 
+                        val_vec = setNames(test_df$size, nm = test_df$group), 
+                        max_val = 'observed')
+
+eval_step2 <- circle_origins(radius_vec = eval_step1, 
+                             stack_order = 'observed', 
+                             circle_space = 2)
+
+eval_step3 <- generate_circle_coords(radius_vec = eval_step1, 
+                                     origins_vec = eval_step2, 
+                                     coord_count = 100)
+
+
+eval_step1_small <- circle_radius_area_prop(max_r = 10, 
+                                      val_vec = setNames(test_df$reduced_size, nm = test_df$group), 
+                                      max_val = max(test_df$size))
+
+eval_step3_small <- generate_circle_coords(radius_vec = eval_step1_small, 
+                                     origins_vec = eval_step2, 
+                                     coord_count = 100)
+
+
+
+founder_inbr_contr_info
+
+rcw_step1 <- circle_radius_area_prop(max_r = 10, 
+                                      val_vec = setNames(founder_inbr_contr_info$total_count, 
+                                                         nm = founder_inbr_contr_info$group), 
+                                      max_val = 'observed')
+
+rcw_step2 <- circle_origins(radius_vec = rcw_step1, 
+                             stack_order = c('ANF', 'CBJTC', 'FTB', 'FTS', 'ONF', 'WSF-CITRUS', 'non-transloc'), 
+                             circle_space = 5)
+
+rcw_step3 <- generate_circle_coords(radius_vec = rcw_step1, 
+                                     origins_vec = rcw_step2, 
+                                     coord_count = 100)
+
+
+rcw_step1_small <- circle_radius_area_prop(max_r = 10, 
+                                            val_vec = setNames(founder_inbr_contr_info$inbr_count, 
+                                                               nm = founder_inbr_contr_info$group), 
+                                            max_val = max(founder_inbr_contr_info$total_count))
+
+rcw_step3_small <- generate_circle_coords(radius_vec = rcw_step1_small, 
+                                           origins_vec = rcw_step2, 
+                                           coord_count = 100)
+
+
+
+
+
+
+
+
+
+
+
+ggplot(data = eval_step3) +
+  geom_polygon(aes(x, y, group = group, fill = group),
+               colour = NA,
+               alpha = 0.5) +
+  geom_polygon(data = eval_step3_small,
+               aes(x, y, group = group, fill = group),
+               colour = NA,
+               alpha = 1) +
+  
+  theme_bw()
+
+
+
+
+
+
+test_vec_r <- circle_radius_area_prop(max_r = 10,
+                        val_vec = count_vec,
+                        max_val = 'observed')
+
+
+#origin coords
+order_test <- c('e', 'a', 'b', 'd', 'f', 'c')
+test_vec_r_reorder <- test_vec_r[match(order_test, names(test_vec_r))]
+
+#origin coords
+#origin_coords_test <- cumsum(test_vec_r_reorder*2) + cumsum(c(0, rep(2, length(test_vec_r_reorder) - 1))) - test_vec_r_reorder[1]
+origin_coords_test <- cumsum((test_vec_r_reorder + c(0, test_vec_r_reorder[-length(test_vec_r_reorder)]))) + cumsum(c(0, rep(2, length(test_vec_r_reorder) - 1))) - test_vec_r_reorder[1]
+
+coord_list <- list()
+
+for (i in names(origin_coords_test)) {
+  coord_list[[i]] <- data.frame(group = i,
+                                x = 0 + test_vec_r_reorder[i]*cos((0:vertices_count)*2*pi/vertices_count),
+                                y = origin_coords_test[i] + test_vec_r_reorder[i]*sin((0:vertices_count)*2*pi/vertices_count))
+}
+
+coord_df <- do.call(rbind, coord_list)
+
+
+ggplot(data = coord_df) +
+  geom_polygon(aes(x, y, group = group, fill = group),
+               colour = NA,
+               alpha=0.3) +
+  theme_bw()
+
+
+
+
+origin_coords_test
+
+
+count_vec
+
+
+
+
+
+#x = circleCenterX + radius * cos(angleInRadians)
+#y = circleCenterY + radius * sin(angleInRadians)
+
+radius * cos(angleInRadians)
+2*pi
+
+(1:10)*2*pi/10
+
+
+vertices_count <- 200
+
+data.frame(x = 0 + 10*cos((0:vertices_count)*2*pi/vertices_count),
+           y = 0 + 10*sin((0:vertices_count)*2*pi/vertices_count)) %>% 
+  ggplot() +
+  geom_polygon(aes(x, y),
+               colour=NA,
+               alpha=0.3) +
+  theme_nothing()
+
+
+
+
+
+
+
 
 
 
