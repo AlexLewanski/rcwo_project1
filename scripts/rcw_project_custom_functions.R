@@ -75,7 +75,7 @@ ped_add_dummy_parents <- function(ped, id, fid, mid, sex, nest_id, founder_paren
     group_split(missing_parent) %>% 
     map_df( ~ .x %>% 
               mutate(dummy_parent_id = paste(missing_parent, 1:n(), sep = "_") )) %>% 
-    select(NatalNest, dummy_parent_id)
+    dplyr::select(NatalNest, dummy_parent_id)
   
   parental_replacement_id_df <- left_join(single_parent_nest_df, 
                                           parent_dummy_id_df, 
@@ -84,7 +84,7 @@ ped_add_dummy_parents <- function(ped, id, fid, mid, sex, nest_id, founder_paren
     mutate(column_index = if_else(FemaleID %in% founder_parent_vals, 
                                   which(colnames(single_parent_nest_df) == 'FemaleID'), 
                                   which(colnames(single_parent_nest_df) == 'MaleID'))) %>% 
-    select(row_index, column_index, dummy_parent_id)
+    dplyr::select(row_index, column_index, dummy_parent_id)
   
   ped[as.matrix(parental_replacement_id_df[,c('row_index', 'column_index')])] <- parental_replacement_id_df$dummy_parent_id
   
