@@ -35,7 +35,7 @@ library(here)
 here::here()
 
 output_processed_data <- FALSE
-output_census_eval_plots <- FALSE
+output_census_eval_plots <- TRUE
 
 
 ### LOADING CUSTOM FUNCTIONS AND DATA ###
@@ -69,7 +69,7 @@ summer_census_detected <- raw_dat_list$lastseendetail %>%
   mutate(RCWid_old = RCWid) %>% #retain original ID in column named RCWid_old
   mutate(RCWid = case_when(year < 2005 & RCWid == 'GB=Z' ~ 'GB-Z', #fix GB-Z
                            TRUE ~ RCWid)) %>% 
-  select(RCWid, Detected, SurveyType, year) %>% 
+  dplyr::select(RCWid, Detected, SurveyType, year) %>% 
   group_by(RCWid, year) %>% 
   slice_head(n = 1) #if there are more than one observations/indiv/census, keep only one
 
@@ -80,7 +80,7 @@ birth_year_info <- raw_dat_list$rcws %>%
   mutate(Detected = NA,
          SurveyType = 'birth_info') %>% 
   rename(year = MinAge) %>% 
-  select(RCWid, Detected, SurveyType, year) %>% 
+  dplyr::select(RCWid, Detected, SurveyType, year) %>% 
   filter(!is.na(year))
 
 #combine birth and census information
@@ -96,7 +96,7 @@ obs_info_combine_addint <- add_intervening_years(data = obs_info_combine,
 #combine the census/birth info with the information on each woodpecker
 obs_info_combine_addint1 <- obs_info_combine_addint %>%   
   left_join(., raw_dat_list$rcws %>% 
-              select(RCWid, Origin),
+              dplyr::select(RCWid, Origin),
             by = 'RCWid') %>% 
   mutate(Origin_update = case_when(is.na(Origin) ~ 'unknown',
                                    TRUE ~ Origin))
@@ -227,7 +227,7 @@ message("Are all individuals found over a continuous sequence of years in the pr
 ###########################
 
 rcw_pedigree_info <- raw_dat_list$nests %>% 
-  select(ID, MaleID, FemaleID) %>% 
+  dplyr::select(ID, MaleID, FemaleID) %>% 
   #left_join(., raw_dat_list$rcws_wout_format[,c('ID', 'RCWid')] %>% 
   #            rename(MaleID = ID), by = 'MaleID') %>% 
   #select(-MaleID) %>% 
@@ -390,7 +390,6 @@ pop_count_scenario_plot_w_cor <- pop_count_scenario_plot +
 if (isTRUE(output_census_eval_plots)) {
   cowplot::ggsave2(filename = here('figures', 
                                    'supplement', 
-                                   'figures', 
                                    'pop_count_scenario_plot_w_cor.png'),
                    plot = pop_count_scenario_plot_w_cor,
                    width = 8.5*1, height = 6.25*1, bg = 'white')
@@ -439,7 +438,6 @@ obs_vs_deduced_barplot <- scenarios_long_list$Scenario3 %>%
 if (isTRUE(output_census_eval_plots)) {
   cowplot::ggsave2(filename = here('figures', 
                                    'supplement', 
-                                   'figures', 
                                    'obs_vs_deduced_barplot.png'),
                  plot = obs_vs_deduced_barplot,
                  width = 8.75*1.1, height = 5.5*1.1, bg = 'white')

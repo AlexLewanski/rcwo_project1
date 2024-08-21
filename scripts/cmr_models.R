@@ -587,7 +587,7 @@ anytransloc_top_mod_plot <- anytransloc_top_mod %>%
   ylab('Apparent survival') +
   coord_cartesian(clip = 'off')
 
-ggsave(filename = here('figures', 'supplement', 'figures', 'markrecap_anytransloc_top_mod_plot.png' ),
+ggsave(filename = here('figures', 'supplement', 'markrecap_anytransloc_top_mod_plot.png' ),
                  plot = anytransloc_top_mod_plot,
                  width = 5, height = 4, bg = 'white')
 
