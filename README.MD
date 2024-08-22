@@ -36,15 +36,10 @@ rcwo_project1
 
 ## Content details
 ### `figures`
-### `|-- main_paper`
-The figures in the manuscript's main text.
-### `-- supplement`
-The figures in the manuscript's supplementary material.
+The `figures` directory has two subdirectories. The `figures/main_paper` directory contains the figures in the manuscript's main text, and `figures/supplement` directory contains the figures in the manuscript's supplementary material. 
 
 ### `results`
-Output of analyses and other results files. Nested within this directory is the `text_results` subdirectory.
-### `-- text_results`
-Text files containing results reported in the manuscript's main text.
+Contains the output of analyses and other results files. `results` also contains a subdirectory, `results/text_results` contains text files with results reported in the manuscript's main text.
 
 ### `scripts`
 The scripts used for data processing, analysis, and visualization.
