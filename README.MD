@@ -21,7 +21,7 @@ Reed Bowman| |Archbold Biological Station
 ## Overview
 The `rcw_project1` repo is associated with the following manuscript: "RCW project." This repo contains the project scripts associated with data processing, analysis, and visualization, and the figures and tables found in the main text and supplementary table of the manuscript. Communication regarding the specific content of this repo or analysis details should be directed to Alex Lewanski (see [Author](#author) section). Other communication about the project can be directed to Alex or Sarah Fitzpatrick, the senior author of this work.
 
-## Contents
+## Directory tree
 ```
 rcwo_project1
 |-- figures
@@ -35,14 +35,14 @@ rcwo_project1
 
 
 ## Content details
-### `figures`
-The `figures` directory has two subdirectories. The `figures/main_paper` directory contains the figures in the manuscript's main text, and `figures/supplement` directory contains the figures in the manuscript's supplementary material. 
+### [`figures`](./figures/)
+The `figures` directory has two subdirectories. The [`figures/main_paper`](./figures/main_paper/) directory contains the figures in the manuscript's main text, and [`figures/supplement`](./figures/supplement/) directory contains the figures in the manuscript's supplementary material. 
 
 ### `results`
-Contains the output of analyses and other results files. `results` also contains a subdirectory, `results/text_results` contains text files with results reported in the manuscript's main text.
+Contains the output of analyses and other results files. `results` also contains a subdirectory, [`results/text_results`](./results/text_results/) contains text files with results reported in the manuscript's main text.
 
-### `scripts`
+### [`scripts`](./scripts/)
 The scripts used for data processing, analysis, and visualization.
 
-### `tables`
+### [`tables`](./tables/)
 The tables (formatted for LaTeX) found in the main text and supplementary material.
